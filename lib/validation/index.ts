@@ -53,3 +53,26 @@ export const activateDeviceSchema = z.object({
   employeeId: z.uuid("Invalid employee").nullable().optional(),
 });
 export type ActivateDeviceInput = z.infer<typeof activateDeviceSchema>;
+
+// --- Step 5: dashboard core (devices reassign, location edit, targets) ---
+
+export const reassignDeviceSchema = z.object({
+  locationId: z.uuid("Invalid location"),
+  employeeId: z.uuid("Invalid employee").nullable().optional(),
+});
+export type ReassignDeviceInput = z.infer<typeof reassignDeviceSchema>;
+
+export const locationUpdateSchema = z.object({
+  name: z.string().trim().min(1, "Location name is required").max(200).optional(),
+  address: z.string().trim().min(1, "Address is required").max(500).optional(),
+  googleReviewUrl: z.url("Enter a valid URL").trim().optional(),
+  language: z.string().trim().min(2).max(10).optional(),
+});
+export type LocationUpdateInput = z.infer<typeof locationUpdateSchema>;
+
+export const targetSchema = z.object({
+  locationId: z.uuid("Invalid location"),
+  periodType: z.enum(["weekly", "monthly"]),
+  targetScans: z.coerce.number().int().min(1, "Target must be at least 1"),
+});
+export type TargetInput = z.infer<typeof targetSchema>;
