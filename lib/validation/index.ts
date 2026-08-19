@@ -31,3 +31,25 @@ export const resetPasswordSchema = z.object({
     .max(72, "Password is too long"),
 });
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+
+// --- Step 4: locations / employees / device activation ---
+
+export const locationSchema = z.object({
+  name: z.string().trim().min(1, "Location name is required").max(200),
+  address: z.string().trim().min(1, "Address is required").max(500),
+  googleReviewUrl: z.url("Enter a valid URL").trim(),
+  language: z.string().trim().min(2).max(10).default("en"),
+});
+export type LocationInput = z.infer<typeof locationSchema>;
+
+export const employeeSchema = z.object({
+  name: z.string().trim().min(1, "Employee name is required").max(200),
+  locationId: z.uuid("Invalid location"),
+});
+export type EmployeeInput = z.infer<typeof employeeSchema>;
+
+export const activateDeviceSchema = z.object({
+  locationId: z.uuid("Invalid location"),
+  employeeId: z.uuid("Invalid employee").nullable().optional(),
+});
+export type ActivateDeviceInput = z.infer<typeof activateDeviceSchema>;

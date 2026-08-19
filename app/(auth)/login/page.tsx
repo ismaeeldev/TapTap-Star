@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,7 +16,19 @@ import { loginSchema, type LoginInput } from "@/lib/validation";
 import { toast } from "@/lib/toast";
 
 export default function LoginPage() {
+  return (
+    <React.Suspense fallback={null}>
+      <LoginPageContent />
+    </React.Suspense>
+  );
+}
+
+function LoginPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // Preserves the /claim/[code] destination through the login step (02_APPLICATION_FLOW.md
+  // section 3's auth-gate requirement — must not lose the device code from context).
+  const callbackUrl = searchParams.get("callbackUrl");
   const {
     register,
     handleSubmit,
@@ -40,7 +52,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/dashboard");
+    router.push(callbackUrl && callbackUrl.startsWith("/") ? callbackUrl : "/dashboard");
     router.refresh();
   };
 
