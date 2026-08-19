@@ -98,6 +98,23 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       throw new AuthError("Location not found", 404);
     }
 
+    // Guard against orphaning an active device: devices.locationId is onDelete: set null, but
+    // devices.status is NOT reset by that cascade, and scans.locationId is not-null — an
+    // active-but-locationless device would throw a DB error on its next real scan. Deactivate
+    // first, or reassign it, before deleting the location.
+    const activeDevice = await db.query.devices.findFirst({
+      where: and(eq(devices.locationId, id), eq(devices.status, "active")),
+    });
+    if (activeDevice) {
+      return NextResponse.json(
+        {
+          message:
+            "This location still has an active device. Deactivate or reassign it before deleting the location.",
+        },
+        { status: 409 }
+      );
+    }
+
     await db.delete(locations).where(eq(locations.id, id));
 
     return NextResponse.json({ ok: true });

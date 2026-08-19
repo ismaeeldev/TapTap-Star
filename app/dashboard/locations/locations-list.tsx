@@ -217,8 +217,8 @@ function EditDeleteControls({ location }: { location: LocationRow }) {
             <DialogTitle>Delete this location?</DialogTitle>
           </DialogHeader>
           <p className="text-body-sm text-text-muted">
-            This permanently deletes &ldquo;{location.name}&rdquo; and its scan history. Devices
-            here become unassigned. This cannot be undone.
+            This permanently deletes &ldquo;{location.name}&rdquo; and its scan history. Any
+            active device here must be deactivated or reassigned first. This cannot be undone.
           </p>
           <DialogFooter>
             <Button variant="destructive" onClick={handleDelete} disabled={submitting}>
