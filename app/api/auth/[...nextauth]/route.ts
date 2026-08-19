@@ -1,5 +1,3 @@
-import { NextResponse } from "next/server";
+import { handlers } from "@/lib/auth/auth";
 
-export async function GET() {
-  return NextResponse.json({ todo: "api/auth/[...nextauth]" });
-}
+export const { GET, POST } = handlers;
