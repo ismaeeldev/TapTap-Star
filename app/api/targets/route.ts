@@ -1,26 +1,33 @@
 import { NextResponse } from "next/server";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { targets, locations } from "@/lib/db/schema";
 import { requireSession, authErrorResponse, AuthError } from "@/lib/auth/rbac";
 import { targetSchema } from "@/lib/validation";
 
 // GET /api/targets — every active target for the session account's locations (team target
-// panel on /dashboard/employees).
+// panel on /dashboard/employees). Scoped via a SQL join on locations.account_id rather than
+// loading every target row and filtering in JS.
 export async function GET() {
   try {
     const session = await requireSession();
-    const locs = await db.query.locations.findMany({
-      where: eq(locations.accountId, session.user.accountId),
-    });
-    const locIds = new Set(locs.map((l) => l.id));
 
-    const rows = await db.query.targets.findMany({
-      orderBy: (t, { desc }) => [desc(t.updatedAt)],
-    });
-    const scoped = rows.filter((t) => locIds.has(t.locationId));
+    const rows = await db
+      .select({
+        id: targets.id,
+        locationId: targets.locationId,
+        periodType: targets.periodType,
+        targetScans: targets.targetScans,
+        createdByUserId: targets.createdByUserId,
+        createdAt: targets.createdAt,
+        updatedAt: targets.updatedAt,
+      })
+      .from(targets)
+      .innerJoin(locations, eq(targets.locationId, locations.id))
+      .where(eq(locations.accountId, session.user.accountId))
+      .orderBy(desc(targets.updatedAt));
 
-    return NextResponse.json({ targets: scoped });
+    return NextResponse.json({ targets: rows });
   } catch (err) {
     const { message, status } = authErrorResponse(err);
     return NextResponse.json({ message }, { status });

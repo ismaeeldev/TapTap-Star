@@ -48,9 +48,9 @@ export function DeviceActions({
 
   const locationChanged = selectedLocationId !== currentLocationId;
 
-  async function loadEmployees(locationId: string) {
+  async function loadEmployees(locationId: string, opts?: { preserveSelection?: boolean }) {
     setLoadingEmployees(true);
-    setSelectedEmployeeId("");
+    if (!opts?.preserveSelection) setSelectedEmployeeId("");
     try {
       const res = await fetch(`/api/employees?locationId=${locationId}`);
       const data = await res.json();
@@ -121,7 +121,8 @@ export function DeviceActions({
           if (open) {
             setSelectedLocationId(currentLocationId ?? "");
             setSelectedEmployeeId(currentEmployeeId ?? "");
-            if (currentLocationId) void loadEmployees(currentLocationId);
+            if (currentLocationId)
+              void loadEmployees(currentLocationId, { preserveSelection: true });
           }
         }}
       >
