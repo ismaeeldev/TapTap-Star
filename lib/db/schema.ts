@@ -393,7 +393,7 @@ export const auditLogs = pgTable(
       .references(() => users.id),
     action: text("action").notNull(),
     targetType: text("target_type").notNull(),
-    targetId: uuid("target_id"),
+    targetId: uuid("target_id").notNull(),
     metadataJson: jsonb("metadata_json"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

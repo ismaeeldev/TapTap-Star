@@ -8,6 +8,13 @@
       "when": 1787122851716,
       "tag": "0000_gifted_green_goblin",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787131893745,
+      "tag": "0001_curly_mandarin",
+      "breakpoints": true
     }
   ]
 }
