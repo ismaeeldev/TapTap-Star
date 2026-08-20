@@ -15,9 +15,13 @@ const isSecure = process.env.NEXT_PUBLIC_APP_URL?.startsWith("https://");
 const COOKIE_NAME = isSecure ? "__Secure-authjs.session-token" : "authjs.session-token";
 
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
+  const { searchParams, origin } = new URL(req.url);
   const token = searchParams.get("token");
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  // Internal same-app redirect targets must be derived from the live request's own origin, not
+  // NEXT_PUBLIC_APP_URL — see the regression-watchlist entry from Step 4's /r/[code] fix. The
+  // env var is reserved for genuinely external contexts (the welcome email's dashboardUrl below).
+  const appUrl = origin;
+  const emailAppUrl = process.env.NEXT_PUBLIC_APP_URL ?? origin;
 
   if (!token) {
     return NextResponse.redirect(new URL("/verify-email?error=missing_token", appUrl));
@@ -55,7 +59,7 @@ export async function GET(req: Request) {
   // and-forget-safe — notify() never throws, so this can't break the login/redirect flow below.
   await notify(account.id, "welcome", {
     name: user.name,
-    dashboardUrl: `${appUrl}/dashboard`,
+    dashboardUrl: `${emailAppUrl}/dashboard`,
     recipientEmail: user.email,
   });
 
