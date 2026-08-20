@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { auth, signOut } from "@/lib/auth/auth";
+import { isApprovedAgencySession } from "@/lib/auth/rbac";
 import { db } from "@/lib/db/client";
 import { accounts } from "@/lib/db/schema";
 import { Logo } from "@/components/shared/logo";
@@ -24,6 +25,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
     ? await db.query.accounts.findFirst({ where: eq(accounts.id, session.user.accountId) })
     : null;
 
+  // Live DB re-check (isApprovedAgencySession), not session.user.accountType/agencyStatus — same
+  // stale-JWT reasoning as the Step 7 final-verification fix (see lib/auth/rbac.ts's doc comment
+  // and 04_PROJECT_STATE.md's regression watchlist entry): without this, a just-approved agency's
+  // own already-open session could reach /dashboard/clients directly by URL (that page does the
+  // live re-check correctly) but never see the "Clients" nav link appear here until a re-login —
+  // a real, confusing inconsistency this global shell must not reintroduce.
+  const showClients = session ? await isApprovedAgencySession(session) : false;
+
   return (
     <div className="flex min-h-svh flex-col bg-bg-page lg:flex-row">
       <aside className="border-b border-border-default bg-bg-surface px-4 py-3 lg:w-64 lg:shrink-0 lg:border-b-0 lg:border-r lg:px-4 lg:py-6">
@@ -32,9 +41,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             <Logo />
           </Link>
         </div>
-        <DashboardNav
-          showClients={session?.user.accountType === "agency" && session?.user.agencyStatus === "approved"}
-        />
+        <DashboardNav showClients={showClients} />
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
