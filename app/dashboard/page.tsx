@@ -1,6 +1,7 @@
 import { Radio, Building2 } from "lucide-react";
 import { and, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth/auth";
+import { isApprovedAgencySession } from "@/lib/auth/rbac";
 import { db } from "@/lib/db/client";
 import { devices, locations, employees, scans } from "@/lib/db/schema";
 import { getCurrentMonthRange } from "@/lib/queries/leaderboard";
@@ -24,14 +25,25 @@ export default async function DashboardPage() {
   const session = await auth();
   if (!session?.user) return null;
 
-  if (session.user.accountType === "agency") {
+  // Live DB re-check (isApprovedAgencySession), not session.user.accountType — see that
+  // function's doc comment in lib/auth/rbac.ts for why: a just-approved agency's own already-open
+  // session must see the real Clients entry point immediately, not a stale "coming later" message
+  // (which was also outdated copy — /dashboard/clients was built in Step 7 and exists now).
+  if (await isApprovedAgencySession(session)) {
     return (
       <GradientMesh className="flex min-h-[60vh] flex-col items-center justify-center gap-4 rounded-lg px-4 py-16 text-center">
         <Building2 className="size-10 text-brand" />
         <p className="text-h3 font-semibold text-text-primary">Agency dashboard</p>
         <p className="max-w-sm text-body-sm text-text-muted">
-          Multi-business agency management is coming in a later step.
+          Manage every business you work with from one place.
         </p>
+        <AnimatedGradientBorder>
+          <Link href="/dashboard/clients">
+            <Button variant="secondary" className="border-0 bg-transparent hover:bg-transparent hover:scale-100">
+              Go to Clients
+            </Button>
+          </Link>
+        </AnimatedGradientBorder>
       </GradientMesh>
     );
   }

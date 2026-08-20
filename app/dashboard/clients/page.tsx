@@ -1,5 +1,6 @@
 import { Building2, Lock } from "lucide-react";
 import { auth } from "@/lib/auth/auth";
+import { isApprovedAgencySession } from "@/lib/auth/rbac";
 import { EmptyState } from "@/components/shared/empty-state";
 import { StatTile } from "@/components/shared/stat-tile";
 import { ClientsList } from "@/components/dashboard/clients-list";
@@ -7,12 +8,16 @@ import { getAgencyClients, rollupClients } from "@/lib/queries/agency";
 
 // Requires type='agency' AND agency_status='approved' — checked BOTH here (server component,
 // never trust UI hiding alone) and again in every /api/clients* route via the same
-// requireAccountAccess-adjacent check, per 03_DATA_MODEL_AND_ARCHITECTURE.md §4.
+// requireAccountAccess-adjacent check, per 03_DATA_MODEL_AND_ARCHITECTURE.md §4. Uses a live DB
+// re-check (isApprovedAgencySession), not the session's cached fields — see that function's doc
+// comment in lib/auth/rbac.ts: without this, a just-approved agency's own already-open browser
+// session would still be denied here even though /dashboard/settings (which queries the DB
+// directly) already told them they're approved.
 export default async function ClientsPage() {
   const session = await auth();
   if (!session?.user) return null;
 
-  if (session.user.accountType !== "agency" || session.user.agencyStatus !== "approved") {
+  if (!(await isApprovedAgencySession(session))) {
     return (
       <div className="space-y-6">
         <h1 className="text-h2 font-display font-semibold text-text-primary">Clients</h1>

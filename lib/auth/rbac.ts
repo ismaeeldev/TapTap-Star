@@ -11,7 +11,7 @@
 //   await requireAccountAccess(session, targetAccountId);
 import { auth } from "@/lib/auth/auth";
 import { db } from "@/lib/db/client";
-import { accounts } from "@/lib/db/schema";
+import { accounts, users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import type { Session } from "next-auth";
 
@@ -48,12 +48,44 @@ export async function requireRole(
 }
 
 /**
+ * Live re-check of an account's `type`/`agency_status` (and the session's own role) straight
+ * from the DB — never trust the session's cached copies of these three fields for an
+ * authorization decision. Auth.js v5's JWT `jwt()` callback (lib/auth/auth.config.ts) only
+ * refreshes token fields on sign-in, not on every request, so `session.user.accountType`/
+ * `agencyStatus`/`role` are a snapshot from whenever the user last logged in — stale the moment
+ * an admin approves/rejects an agency request or promotes a user's role while that user's
+ * browser session is still open. Every agency-gate check must call this instead of reading
+ * `session.user.accountType`/`agencyStatus`/`role` directly, or a just-approved agency's own
+ * still-open session gets incorrectly denied access to its own new `/dashboard/clients` (while
+ * e.g. the settings page, which already queries the DB directly, correctly shows "you're
+ * approved" — a real, user-visible contradiction, not just staleness in the abstract).
+ */
+export async function isApprovedAgencySession(session: Session): Promise<boolean> {
+  // Role is promoted to "agency_admin" in the SAME approve-route transaction that flips
+  // type/agencyStatus (see app/api/admin/agency-requests/[id]/approve/route.ts) — it goes stale
+  // in the JWT at exactly the same moment those two fields do. Gating on the session's cached
+  // `role` first (as an earlier version of this function did) silently defeated the whole point
+  // of this live re-check: a just-approved session would still fail here on the stale role
+  // before ever reaching the DB query. Read the user's live role from the DB too, not the token.
+  const [account, user] = await Promise.all([
+    db.query.accounts.findFirst({ where: eq(accounts.id, session.user.accountId) }),
+    db.query.users.findFirst({ where: eq(users.id, session.user.id) }),
+  ]);
+  return (
+    user?.role === "agency_admin" &&
+    account?.type === "agency" &&
+    account?.agencyStatus === "approved"
+  );
+}
+
+/**
  * Multi-tenant isolation guard (architecture doc section 4). Verifies the session may access
  * `targetAccountId` — either it IS the session's own account, or the session belongs to an
  * approved agency (BOTH `type='agency'` AND `agency_status='approved'` — never gate on type
- * alone, see the architecture doc's explicit warning) whose `parent_agency_id` matches the
- * target account. Throws a 403 AuthError otherwise. Use this on every route that takes an
- * :accountId/:clientId param, rather than reimplementing the check ad hoc.
+ * alone, see the architecture doc's explicit warning, and always re-verified live via
+ * `isApprovedAgencySession` rather than the session's cached snapshot) whose `parent_agency_id`
+ * matches the target account. Throws a 403 AuthError otherwise. Use this on every route that
+ * takes an :accountId/:clientId param, rather than reimplementing the check ad hoc.
  */
 export async function requireAccountAccess(
   session: Session,
@@ -61,11 +93,7 @@ export async function requireAccountAccess(
 ): Promise<void> {
   if (session.user.accountId === targetAccountId) return;
 
-  if (
-    session.user.role === "agency_admin" &&
-    session.user.accountType === "agency" &&
-    session.user.agencyStatus === "approved"
-  ) {
+  if (await isApprovedAgencySession(session)) {
     const target = await db.query.accounts.findFirst({
       where: eq(accounts.id, targetAccountId),
     });

@@ -6,12 +6,15 @@ import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { accounts, users } from "@/lib/db/schema";
-import { requireSession, authErrorResponse, AuthError } from "@/lib/auth/rbac";
+import { requireSession, authErrorResponse, AuthError, isApprovedAgencySession } from "@/lib/auth/rbac";
 import { createClientAccountSchema } from "@/lib/validation";
 import { getAgencyClients, rollupClients } from "@/lib/queries/agency";
 
-function assertApprovedAgency(session: Awaited<ReturnType<typeof requireSession>>) {
-  if (session.user.accountType !== "agency" || session.user.agencyStatus !== "approved") {
+// Live DB re-check, not the session's cached accountType/agencyStatus/role — see
+// isApprovedAgencySession's doc comment in lib/auth/rbac.ts for why this matters (a
+// just-approved agency's own already-open session must not be denied its own /dashboard/clients).
+async function assertApprovedAgency(session: Awaited<ReturnType<typeof requireSession>>) {
+  if (!(await isApprovedAgencySession(session))) {
     throw new AuthError("This account is not an approved agency", 403);
   }
 }
@@ -19,7 +22,7 @@ function assertApprovedAgency(session: Awaited<ReturnType<typeof requireSession>
 export async function GET() {
   try {
     const session = await requireSession();
-    assertApprovedAgency(session);
+    await assertApprovedAgency(session);
 
     const clients = await getAgencyClients(session.user.accountId);
     const rollup = rollupClients(clients);
@@ -34,7 +37,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const session = await requireSession();
-    assertApprovedAgency(session);
+    await assertApprovedAgency(session);
 
     let body: unknown;
     try {
