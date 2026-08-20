@@ -53,7 +53,7 @@ export default async function MarketingHomePage() {
           </h2>
         </div>
         <div className="mt-14">
-          <FaqAccordion />
+          <FaqAccordion priceCents={plan.priceCents} currency={plan.currency} />
         </div>
       </section>
 
