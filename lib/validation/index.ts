@@ -156,3 +156,40 @@ export const contactFormSchema = z.object({
   message: z.string().trim().min(1, "Message is required").max(5000),
 });
 export type ContactFormInput = z.infer<typeof contactFormSchema>;
+
+// --- Step 10: internal admin panel ---
+
+export const batchGenerateSchema = z.object({
+  quantity: z.coerce.number().int().min(1, "Quantity must be at least 1").max(1000, "Generate at most 1000 at a time"),
+  deviceType: z.enum(["card", "plaque", "stand"]),
+});
+export type BatchGenerateInput = z.infer<typeof batchGenerateSchema>;
+
+export const batchImportSchema = z.object({
+  csvText: z.string().trim().min(1, "Paste or upload a CSV first"),
+});
+export type BatchImportInput = z.infer<typeof batchImportSchema>;
+
+export const supportForceReassignSchema = z.object({
+  locationId: z.uuid("A location is required"),
+  employeeId: z.uuid().optional().nullable(),
+});
+export type SupportForceReassignInput = z.infer<typeof supportForceReassignSchema>;
+
+export const supportBillingCreditSchema = z.object({
+  amountCents: z.coerce.number().int().min(1, "Amount must be greater than $0").max(100_000_00),
+  reason: z.string().trim().min(1, "A reason is required").max(1000),
+});
+export type SupportBillingCreditInput = z.infer<typeof supportBillingCreditSchema>;
+
+export const adminAccountSearchSchema = z.object({
+  q: z.string().trim().max(200).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+});
+
+export const adminDeviceSearchSchema = z.object({
+  q: z.string().trim().max(200).optional(),
+  status: z.enum(["unassigned", "active", "deactivated"]).optional(),
+  source: z.enum(["generated", "imported"]).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+});
