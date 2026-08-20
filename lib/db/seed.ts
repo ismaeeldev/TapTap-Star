@@ -3,6 +3,14 @@
 // Deliberately does NOT import the real 400-code CSV (../../Refrence/taptapstar_qr_links_400
 // (2).csv) — that's a one-time production/admin action via the CSV-import feature built in
 // Step 10, not something that runs automatically in every dev environment.
+//
+// SAFETY (Step 12 pre-deploy sweep): this script is NOT wired into any build/deploy/postinstall
+// hook anywhere in this repo (checked package.json's scripts and vercel.json) — it only ever
+// runs if someone types `npx tsx lib/db/seed.ts` by hand. That said, this exact database already
+// holds real production data (the real 400-code device batch imported in Step 10), so as one
+// more explicit guard against an accidental re-run against a production DATABASE_URL, this
+// requires SEED_CONFIRM=yes to be set. Delete/rename Taptapstar Internal + Downtown Cafe demo
+// accounts manually before ever pointing this at a real production database on purpose.
 import { config } from "dotenv";
 
 // tsx doesn't auto-load Next.js's .env.local convention the way `next dev`/`next build` do —
@@ -13,6 +21,15 @@ import { config } from "dotenv";
 // would still run before config() does. Using a dynamic import() after config() sidesteps
 // that hoisting entirely.
 config({ path: ".env.local" });
+
+if (process.env.SEED_CONFIRM !== "yes") {
+  console.error(
+    "Refusing to run: this seeds demo data (test accounts, sample devices) against whatever " +
+      "DATABASE_URL is currently loaded. Set SEED_CONFIRM=yes to proceed — only do this against " +
+      "a dev/test database, never production."
+  );
+  process.exit(1);
+}
 
 async function seed() {
   const { hash } = await import("bcryptjs");
