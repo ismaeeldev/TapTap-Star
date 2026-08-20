@@ -76,3 +76,47 @@ export const targetSchema = z.object({
   targetScans: z.coerce.number().int().min(1, "Target must be at least 1"),
 });
 export type TargetInput = z.infer<typeof targetSchema>;
+
+// --- Step 6: analytics date-range + dimension filters ---
+// Shared by app/api/analytics/route.ts and app/api/scans/export/route.ts so the on-screen view
+// and the exported file are always filtered identically.
+export type AnalyticsFilterResult =
+  | { ok: true; range: { start: Date; end: Date }; locationId?: string; deviceId?: string }
+  | { ok: false; message: string };
+
+export function parseAnalyticsFilters(searchParams: URLSearchParams): AnalyticsFilterResult {
+  const fromRaw = searchParams.get("from");
+  const toRaw = searchParams.get("to");
+
+  // Default: current calendar month (UTC), matching lib/queries/leaderboard.ts's convention.
+  const now = new Date();
+  const defaultStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const defaultEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+
+  const start = fromRaw ? new Date(fromRaw) : defaultStart;
+  // `to` is inclusive of the whole day in the UI, so the exclusive upper bound is the day after.
+  const end = toRaw ? new Date(new Date(toRaw).getTime() + 24 * 60 * 60 * 1000) : defaultEnd;
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return { ok: false, message: "Invalid date range" };
+  }
+  if (start >= end) {
+    return { ok: false, message: "Start date must be before end date" };
+  }
+
+  const locationId = searchParams.get("locationId");
+  const deviceId = searchParams.get("deviceId");
+  if (locationId && !z.uuid().safeParse(locationId).success) {
+    return { ok: false, message: "Invalid location filter" };
+  }
+  if (deviceId && !z.uuid().safeParse(deviceId).success) {
+    return { ok: false, message: "Invalid device filter" };
+  }
+
+  return {
+    ok: true,
+    range: { start, end },
+    locationId: locationId ?? undefined,
+    deviceId: deviceId ?? undefined,
+  };
+}

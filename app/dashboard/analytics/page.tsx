@@ -1,3 +1,308 @@
-export default function Page() {
-  return <div>TODO: dashboard/analytics</div>;
+"use client";
+
+import * as React from "react";
+import useSWR from "swr";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from "recharts";
+import { BarChart3, Download, Loader2, RotateCcw } from "lucide-react";
+import { StatTile } from "@/components/shared/stat-tile";
+import { EmptyState } from "@/components/shared/empty-state";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "@/lib/toast";
+
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
+
+type AnalyticsSummary = {
+  totalScans: number;
+  totalScansTrendPercent: number | null;
+  activeDevices: number;
+  mostUsedLocation: { name: string; googleReviewUrl: string; scanCount: number } | null;
+  conversionTrendPercent: number | null;
+  timeSeries: { date: string; scans: number }[];
+};
+
+function toDateInputValue(d: Date) {
+  return d.toISOString().slice(0, 10);
+}
+
+function defaultRange() {
+  const now = new Date();
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  return { from: toDateInputValue(start), to: toDateInputValue(now) };
+}
+
+export default function AnalyticsPage() {
+  const [{ from, to }, setRange] = React.useState(defaultRange);
+  const [locationId, setLocationId] = React.useState<string>("all");
+  const [deviceId, setDeviceId] = React.useState<string>("all");
+  const [exporting, setExporting] = React.useState<"csv" | "pdf" | null>(null);
+
+  const { data: locationsData } = useSWR<{ locations: { id: string; name: string }[] }>(
+    "/api/locations",
+    fetcher
+  );
+  const { data: devicesData } = useSWR<{ devices: { id: string; code: string }[] }>(
+    "/api/devices",
+    fetcher
+  );
+
+  const query = new URLSearchParams({ from, to });
+  if (locationId !== "all") query.set("locationId", locationId);
+  if (deviceId !== "all") query.set("deviceId", deviceId);
+
+  const {
+    data,
+    error,
+    isLoading,
+    mutate,
+  } = useSWR<{ summary: AnalyticsSummary } | { message: string }>(
+    `/api/analytics?${query.toString()}`,
+    fetcher
+  );
+
+  const summary = data && "summary" in data ? data.summary : null;
+  const hasActivity = (summary?.totalScans ?? 0) > 0;
+
+  const handleExport = async (format: "csv" | "pdf") => {
+    setExporting(format);
+    try {
+      const exportQuery = new URLSearchParams(query);
+      exportQuery.set("format", format);
+      const res = await fetch(`/api/scans/export?${exportQuery.toString()}`);
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      if (format === "csv") {
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "taptapstar-scans.csv";
+        a.click();
+      } else {
+        window.open(url, "_blank");
+      }
+      URL.revokeObjectURL(url);
+      toast.success(format === "csv" ? "CSV downloaded." : "Report opened — use your browser's print dialog to save as PDF.");
+    } catch {
+      toast.error(`Couldn't generate the ${format.toUpperCase()} export. Please try again.`);
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  return (
+    <div className="space-y-6 p-6">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <h1 className="text-h3 font-semibold text-text-primary">Analytics</h1>
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="space-y-1">
+            <Label htmlFor="from" className="text-caption">
+              From
+            </Label>
+            <Input
+              id="from"
+              type="date"
+              value={from}
+              max={to}
+              onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))}
+              className="w-auto"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="to" className="text-caption">
+              To
+            </Label>
+            <Input
+              id="to"
+              type="date"
+              value={to}
+              min={from}
+              max={toDateInputValue(new Date())}
+              onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))}
+              className="w-auto"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-caption">Location</Label>
+            <Select value={locationId} onValueChange={setLocationId}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All locations</SelectItem>
+                {locationsData?.locations.map((l) => (
+                  <SelectItem key={l.id} value={l.id}>
+                    {l.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-caption">Device</Label>
+            <Select value={deviceId} onValueChange={setDeviceId}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All devices</SelectItem>
+                {devicesData?.devices.map((d) => (
+                  <SelectItem key={d.id} value={d.id}>
+                    {d.code}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={exporting !== null}
+            onClick={() => handleExport("csv")}
+          >
+            {exporting === "csv" ? <Loader2 className="animate-spin" /> : <Download className="size-3.5" />}
+            CSV
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={exporting !== null}
+            onClick={() => handleExport("pdf")}
+          >
+            {exporting === "pdf" ? <Loader2 className="animate-spin" /> : <Download className="size-3.5" />}
+            PDF
+          </Button>
+        </div>
+      </div>
+
+      {error || (data && "message" in data) ? (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-danger/30 bg-danger/10 px-4 py-3">
+          <p className="text-body-sm text-danger">
+            {data && "message" in data ? data.message : "Couldn't load analytics."}
+          </p>
+          <Button type="button" variant="secondary" size="sm" onClick={() => mutate()}>
+            <RotateCcw className="size-3.5" />
+            Retry
+          </Button>
+        </div>
+      ) : isLoading || !summary ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="h-24 animate-pulse rounded-lg border border-border-default bg-bg-card" />
+          ))}
+        </div>
+      ) : !hasActivity ? (
+        <EmptyState
+          icon={BarChart3}
+          title="No activity in this period"
+          description="No scans were recorded for the selected date range and filters. Try widening the date range or clearing a filter."
+        />
+      ) : (
+        <>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatTile
+              label="Total scans"
+              value={summary.totalScans}
+              trend={
+                summary.totalScansTrendPercent === null
+                  ? undefined
+                  : {
+                      direction: summary.totalScansTrendPercent >= 0 ? "up" : "down",
+                      percent: Math.abs(summary.totalScansTrendPercent),
+                    }
+              }
+              glow={summary.totalScansTrendPercent !== null && summary.totalScansTrendPercent > 0}
+            />
+            <StatTile label="Active devices" value={summary.activeDevices} />
+            <StatTile
+              label="Scan trend"
+              value={summary.totalScans}
+              trend={
+                summary.conversionTrendPercent === null
+                  ? undefined
+                  : {
+                      direction: summary.conversionTrendPercent >= 0 ? "up" : "down",
+                      percent: Math.abs(summary.conversionTrendPercent),
+                    }
+              }
+            />
+            <div className="space-y-2 rounded-lg border border-border-default bg-bg-card p-6">
+              <p className="text-caption font-semibold uppercase tracking-wide text-text-muted">
+                Most-used review link
+              </p>
+              {summary.mostUsedLocation ? (
+                <>
+                  <p className="text-h4 font-semibold text-text-primary">
+                    {summary.mostUsedLocation.name}
+                  </p>
+                  <p className="text-body-sm text-text-muted">
+                    {summary.mostUsedLocation.scanCount.toLocaleString()} scans
+                  </p>
+                </>
+              ) : (
+                <p className="text-body-sm text-text-muted">No scans yet</p>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-border-default bg-bg-card p-6">
+            <p className="mb-4 text-body-sm font-medium text-text-primary">Scans over time</p>
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart data={summary.timeSeries} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-default)" vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 12, fill: "var(--text-muted)" }}
+                  axisLine={{ stroke: "var(--border-default)" }}
+                  tickLine={false}
+                />
+                <YAxis
+                  allowDecimals={false}
+                  tick={{ fontSize: 12, fill: "var(--text-muted)" }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={32}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: "var(--bg-card)",
+                    border: "1px solid var(--border-default)",
+                    borderRadius: 8,
+                    fontSize: 13,
+                    color: "var(--text-primary)",
+                  }}
+                  labelStyle={{ color: "var(--text-muted)" }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="scans"
+                  stroke="var(--brand)"
+                  strokeWidth={2}
+                  dot={false}
+                  activeDot={{ r: 4 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
