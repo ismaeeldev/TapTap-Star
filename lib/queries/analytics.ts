@@ -41,12 +41,21 @@ export async function getScanCount(filters: AnalyticsFilters, range: DateRange):
   return row?.count ?? 0;
 }
 
-/** Count of currently-active devices for the account (not date-scoped — a point-in-time fact). */
-export async function getActiveDeviceCount(accountId: string): Promise<number> {
+/**
+ * Count of currently-active devices for the account — not date-scoped (a point-in-time fact),
+ * but DOES respect the location/device dimensional filters, same as every other KPI here.
+ * Ignoring those filters would make this tile silently disagree with the rest of the filtered
+ * report (e.g. showing the account's total device count while everything else is scoped to one
+ * location the user just selected).
+ */
+export async function getActiveDeviceCount(filters: AnalyticsFilters): Promise<number> {
+  const conditions = [eq(devices.accountId, filters.accountId), eq(devices.status, "active")];
+  if (filters.locationId) conditions.push(eq(devices.locationId, filters.locationId));
+  if (filters.deviceId) conditions.push(eq(devices.id, filters.deviceId));
   const [row] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(devices)
-    .where(and(eq(devices.accountId, accountId), eq(devices.status, "active")));
+    .where(and(...conditions));
   return row?.count ?? 0;
 }
 
@@ -135,7 +144,7 @@ export async function getAnalyticsSummary(filters: AnalyticsFilters): Promise<An
   const [totalScans, prevScans, activeDevices, mostUsedLocation, timeSeries] = await Promise.all([
     getScanCount(filters, filters.range),
     getScanCount(filters, prevRange),
-    getActiveDeviceCount(filters.accountId),
+    getActiveDeviceCount(filters),
     getMostUsedLocation(filters, filters.range),
     getScansTimeSeries(filters, filters.range),
   ]);

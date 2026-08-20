@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import useSWR from "swr";
+import { motion } from "framer-motion";
 import {
   ResponsiveContainer,
   LineChart,
@@ -11,9 +12,11 @@ import {
   CartesianGrid,
   Tooltip,
 } from "recharts";
-import { BarChart3, Download, Loader2, RotateCcw } from "lucide-react";
+import { ArrowDown, ArrowUp, BarChart3, Download, Loader2, RotateCcw } from "lucide-react";
 import { StatTile } from "@/components/shared/stat-tile";
 import { EmptyState } from "@/components/shared/empty-state";
+import { SkeletonStatTile } from "@/components/shared/skeletons";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/lib/toast";
+import { fadeUp, staggerContainer } from "@/lib/motion";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -203,10 +207,21 @@ export default function AnalyticsPage() {
           </Button>
         </div>
       ) : isLoading || !summary ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="h-24 animate-pulse rounded-lg border border-border-default bg-bg-card" />
-          ))}
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <SkeletonStatTile />
+            <SkeletonStatTile />
+            <SkeletonStatTile />
+            <SkeletonStatTile />
+          </div>
+          <div className="space-y-4 rounded-lg border border-border-default bg-bg-card p-6">
+            <Skeleton className="h-5 w-40" />
+            <div className="flex h-64 items-end gap-2">
+              {[40, 65, 50, 80, 60, 90, 55, 70, 45, 85, 60, 75].map((h, i) => (
+                <Skeleton key={i} className="flex-1 rounded-t-sm" style={{ height: `${h}%` }} />
+              ))}
+            </div>
+          </div>
         </div>
       ) : !hasActivity ? (
         <EmptyState
@@ -216,34 +231,68 @@ export default function AnalyticsPage() {
         />
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatTile
-              label="Total scans"
-              value={summary.totalScans}
-              trend={
-                summary.totalScansTrendPercent === null
-                  ? undefined
-                  : {
-                      direction: summary.totalScansTrendPercent >= 0 ? "up" : "down",
-                      percent: Math.abs(summary.totalScansTrendPercent),
-                    }
-              }
-              glow={summary.totalScansTrendPercent !== null && summary.totalScansTrendPercent > 0}
-            />
-            <StatTile label="Active devices" value={summary.activeDevices} />
-            <StatTile
-              label="Scan trend"
-              value={summary.totalScans}
-              trend={
-                summary.conversionTrendPercent === null
-                  ? undefined
-                  : {
-                      direction: summary.conversionTrendPercent >= 0 ? "up" : "down",
-                      percent: Math.abs(summary.conversionTrendPercent),
-                    }
-              }
-            />
-            <div className="space-y-2 rounded-lg border border-border-default bg-bg-card p-6">
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={staggerContainer}
+            className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+          >
+            <motion.div variants={fadeUp}>
+              <StatTile
+                label="Total scans"
+                value={summary.totalScans}
+                trend={
+                  summary.totalScansTrendPercent === null
+                    ? undefined
+                    : {
+                        direction: summary.totalScansTrendPercent >= 0 ? "up" : "down",
+                        percent: Math.abs(summary.totalScansTrendPercent),
+                      }
+                }
+                glow={summary.totalScansTrendPercent !== null && summary.totalScansTrendPercent > 0}
+                className="rounded-lg border border-border-default bg-bg-card p-6"
+              />
+            </motion.div>
+            <motion.div variants={fadeUp}>
+              <StatTile
+                label="Active devices"
+                value={summary.activeDevices}
+                className="rounded-lg border border-border-default bg-bg-card p-6"
+              />
+            </motion.div>
+            {/* Custom tile (not StatTile) — this KPI's headline IS the % change itself, not a
+                count with a trend badge bolted on, so re-using StatTile here would either
+                duplicate the "Total scans" number (the original bug) or need a fake integer
+                animation on a percentage. See 04_PROJECT_STATE.md's Step 6 UI-polish entry. */}
+            <motion.div
+              variants={fadeUp}
+              className="space-y-2 rounded-lg border border-border-default bg-bg-card p-6"
+            >
+              <p className="text-caption font-semibold uppercase tracking-wide text-text-muted">
+                Scan trend
+              </p>
+              {summary.conversionTrendPercent === null ? (
+                <p className="text-h4 font-semibold text-text-muted">—</p>
+              ) : (
+                <p
+                  className={`flex items-baseline gap-1 text-display-md font-display font-bold tabular-nums ${
+                    summary.conversionTrendPercent >= 0 ? "text-success" : "text-danger"
+                  }`}
+                >
+                  {summary.conversionTrendPercent >= 0 ? (
+                    <ArrowUp className="size-5" />
+                  ) : (
+                    <ArrowDown className="size-5" />
+                  )}
+                  {Math.abs(summary.conversionTrendPercent)}%
+                </p>
+              )}
+              <p className="text-body-sm text-text-muted">vs. previous period</p>
+            </motion.div>
+            <motion.div
+              variants={fadeUp}
+              className="space-y-2 rounded-lg border border-border-default bg-bg-card p-6"
+            >
               <p className="text-caption font-semibold uppercase tracking-wide text-text-muted">
                 Most-used review link
               </p>
@@ -259,10 +308,15 @@ export default function AnalyticsPage() {
               ) : (
                 <p className="text-body-sm text-text-muted">No scans yet</p>
               )}
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
 
-          <div className="rounded-lg border border-border-default bg-bg-card p-6">
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={fadeUp}
+            className="rounded-lg border border-border-default bg-bg-card p-6"
+          >
             <p className="mb-4 text-body-sm font-medium text-text-primary">Scans over time</p>
             <ResponsiveContainer width="100%" height={280}>
               <LineChart data={summary.timeSeries} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
@@ -272,6 +326,15 @@ export default function AnalyticsPage() {
                   tick={{ fontSize: 12, fill: "var(--text-muted)" }}
                   axisLine={{ stroke: "var(--border-default)" }}
                   tickLine={false}
+                  // Avoid a wall of overlapping date labels on longer ranges / narrow viewports
+                  // (theme guideline section 6 responsiveness requirement) — recharts skips ticks
+                  // to fit the available width and always keeps the first/last labeled.
+                  interval="preserveStartEnd"
+                  minTickGap={24}
+                  tickFormatter={(value: string) => {
+                    const d = new Date(`${value}T00:00:00Z`);
+                    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" });
+                  }}
                 />
                 <YAxis
                   allowDecimals={false}
@@ -289,6 +352,16 @@ export default function AnalyticsPage() {
                     color: "var(--text-primary)",
                   }}
                   labelStyle={{ color: "var(--text-muted)" }}
+                  labelFormatter={(value) => {
+                    if (typeof value !== "string") return value;
+                    return new Date(`${value}T00:00:00Z`).toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                      timeZone: "UTC",
+                    });
+                  }}
+                  formatter={(value) => [`${Number(value).toLocaleString()} scans`, ""]}
                 />
                 <Line
                   type="monotone"
@@ -300,7 +373,7 @@ export default function AnalyticsPage() {
                 />
               </LineChart>
             </ResponsiveContainer>
-          </div>
+          </motion.div>
         </>
       )}
     </div>
