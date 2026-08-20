@@ -74,8 +74,11 @@ export function AccountsSearch() {
         />
       ) : (
         <>
-          <div className="overflow-hidden rounded-lg border border-border-default">
-            <table className="w-full text-body-sm">
+          {/* Theme guideline §6: horizontal scroll is an explicit escape hatch for genuinely
+              wide data (5 columns incl. an email address), not the primary mobile pattern —
+              never let this table's columns squeeze/overflow the 375px viewport instead. */}
+          <div className="overflow-x-auto rounded-lg border border-border-default">
+            <table className="w-full min-w-[560px] text-body-sm">
               <thead className="bg-bg-muted text-left text-caption font-medium text-text-muted">
                 <tr>
                   <th className="p-3">Name</th>

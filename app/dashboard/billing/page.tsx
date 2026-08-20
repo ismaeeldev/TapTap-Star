@@ -93,8 +93,8 @@ export default async function BillingPage() {
             description="Your first invoice will appear here after your next billing cycle."
           />
         ) : (
-          <div className="overflow-hidden rounded-lg border border-border-default">
-            <table className="w-full text-body-sm">
+          <div className="overflow-x-auto rounded-lg border border-border-default">
+            <table className="w-full min-w-[420px] text-body-sm">
               <thead className="bg-bg-surface text-text-muted">
                 <tr>
                   <th className="px-4 py-2 text-left font-medium">Date</th>

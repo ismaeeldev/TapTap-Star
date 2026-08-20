@@ -74,8 +74,8 @@ export default async function AdminAccountDetailPage({
           {childBusinesses.length === 0 ? (
             <EmptyState icon={Building2} title="No managed businesses yet" />
           ) : (
-            <div className="overflow-hidden rounded-lg border border-border-default">
-              <table className="w-full text-body-sm">
+            <div className="overflow-x-auto rounded-lg border border-border-default">
+              <table className="w-full min-w-[420px] text-body-sm">
                 <thead className="bg-bg-muted text-left text-caption font-medium text-text-muted">
                   <tr>
                     <th className="p-3">Name</th>
@@ -109,8 +109,8 @@ export default async function AdminAccountDetailPage({
         {accountDevices.length === 0 ? (
           <EmptyState icon={Radio} title="No devices on this account" />
         ) : (
-          <div className="overflow-hidden rounded-lg border border-border-default">
-            <table className="w-full text-body-sm">
+          <div className="overflow-x-auto rounded-lg border border-border-default">
+            <table className="w-full min-w-[420px] text-body-sm">
               <thead className="bg-bg-muted text-left text-caption font-medium text-text-muted">
                 <tr>
                   <th className="p-3">Code</th>
