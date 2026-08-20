@@ -138,3 +138,12 @@ export const agencyRejectSchema = z.object({
   reason: z.string().trim().max(1000).optional(),
 });
 export type AgencyRejectInput = z.infer<typeof agencyRejectSchema>;
+
+// --- Step 8: billing / subscriptions ---
+
+export const updatePricingPlanSchema = z.object({
+  // Stored in cents — $1.00 minimum sanity floor, well under the real $29.90 price but guards
+  // against an accidental $0.00 submit.
+  priceCents: z.coerce.number().int().min(100, "Price must be at least $1.00").max(100_000_000),
+});
+export type UpdatePricingPlanInput = z.infer<typeof updatePricingPlanSchema>;

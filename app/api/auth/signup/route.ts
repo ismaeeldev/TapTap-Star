@@ -6,6 +6,7 @@ import { db } from "@/lib/db/client";
 import { accounts, users, emailVerificationTokens } from "@/lib/db/schema";
 import { signupSchema } from "@/lib/validation";
 import { sendVerificationEmail } from "@/lib/email/client";
+import { createStripeCustomerAndSubscription } from "@/lib/stripe/subscription";
 
 const VERIFY_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 
@@ -60,6 +61,26 @@ export async function POST(req: Request) {
       name,
     })
     .returning();
+
+  // Real Stripe Customer + Subscription creation at signup (locked decision — Step 8, not
+  // deferred to first device activation). Deliberately NOT allowed to fail the whole signup:
+  // Stripe is a third-party dependency, and a transient network blip here must not block a
+  // business owner from creating their account at all — the account can exist locally without a
+  // live subscription temporarily; /dashboard/billing degrades to a "billing not set up yet"
+  // state in that case rather than 500ing, and a future manual/lazy retry (e.g. re-attempting on
+  // next billing-page visit) can pick it up. Logged loudly so this never goes unnoticed.
+  try {
+    await createStripeCustomerAndSubscription({
+      accountId: account.id,
+      billingEmail: email,
+      name,
+    });
+  } catch (err) {
+    console.error(
+      `[signup] Stripe customer/subscription creation failed for account ${account.id} — account created locally without billing. This should be investigated / retried.`,
+      err
+    );
+  }
 
   const token = randomBytes(32).toString("hex");
   await db.insert(emailVerificationTokens).values({

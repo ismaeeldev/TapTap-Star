@@ -9,6 +9,7 @@ import { accounts, users } from "@/lib/db/schema";
 import { requireSession, authErrorResponse, AuthError, isApprovedAgencySession } from "@/lib/auth/rbac";
 import { createClientAccountSchema } from "@/lib/validation";
 import { getAgencyClients, rollupClients } from "@/lib/queries/agency";
+import { syncAgencySubscriptionQuantity } from "@/lib/stripe/subscription";
 
 // Live DB re-check, not the session's cached accountType/agencyStatus/role — see
 // isApprovedAgencySession's doc comment in lib/auth/rbac.ts for why this matters (a
@@ -84,6 +85,20 @@ export async function POST(req: Request) {
       // in on the client's behalf / the client can log in right away without a verify step.
       emailVerifiedAt: new Date(),
     });
+
+    // The one remaining quantity-based Stripe sync (§6/§8): a new managed business changes the
+    // agency's own billable_quantity — recompute + push to Stripe. Deliberately NOT allowed to
+    // fail the client-creation request itself (same reasoning as signup's Stripe try/catch) —
+    // the client account is real and usable either way; the quantity will self-correct at the
+    // next invoice.upcoming webhook safety-net sync if this call has a transient failure.
+    try {
+      await syncAgencySubscriptionQuantity(session.user.accountId);
+    } catch (err) {
+      console.error(
+        `[clients] Stripe agency quantity sync failed for agency ${session.user.accountId} after creating client ${account.id}`,
+        err
+      );
+    }
 
     return NextResponse.json({ ok: true, clientId: account.id }, { status: 201 });
   } catch (error) {

@@ -1,5 +1,204 @@
+// Real Stripe webhook handler — Step 8. Verifies the signature via stripe.webhooks.constructEvent
+// (never trust an unverified payload). Handles the events listed in
+// ../../AgentGuide/05_MASTER_BUILD_GUIDE.md Step 8.2:
+//   invoice.payment_failed        -> account status: grace_period
+//   invoice.payment_succeeded     -> account status: active, sync a local `invoices` row
+//   customer.subscription.deleted -> account status: suspended
+//   invoice.upcoming              -> safety-net price re-sync (§8) + agency quantity re-verify (§6)
+//
+// IMPORTANT (see 04_PROJECT_STATE.md): a REAL webhook endpoint still needs to be registered in
+// the Stripe Dashboard (Step 8.3, manual task) before production — this route works correctly
+// against real Stripe events once that's done. STRIPE_WEBHOOK_SECRET in .env.local is currently
+// a THROWAWAY local-testing value (see the generateTestHeaderString testing note), not a real one.
 import { NextResponse } from "next/server";
+import { eq } from "drizzle-orm";
+import type Stripe from "stripe";
+import { db } from "@/lib/db/client";
+import { accounts, invoices, subscriptions } from "@/lib/db/schema";
+import { stripe } from "@/lib/stripe/client";
+import { getDefaultPricingPlan } from "@/lib/stripe/pricing";
+import { syncAgencySubscriptionQuantity, mapStripeSubscriptionStatus } from "@/lib/stripe/subscription";
 
-export async function GET() {
-  return NextResponse.json({ todo: "api/billing/webhook" });
+async function findAccountByStripeCustomerId(customerId: string) {
+  return db.query.accounts.findFirst({ where: eq(accounts.stripeCustomerId, customerId) });
+}
+
+function invoiceCustomerId(invoice: Stripe.Invoice): string | null {
+  const customer = invoice.customer;
+  if (!customer) return null;
+  return typeof customer === "string" ? customer : customer.id;
+}
+
+async function upsertInvoiceRow(accountId: string, invoice: Stripe.Invoice, status: "paid" | "open" | "failed") {
+  const existing = await db.query.invoices.findFirst({
+    where: eq(invoices.stripeInvoiceId, invoice.id ?? ""),
+  });
+
+  const raw = invoice as unknown as { period_start?: number; period_end?: number };
+  const periodStart = raw.period_start ? new Date(raw.period_start * 1000) : null;
+  const periodEnd = raw.period_end ? new Date(raw.period_end * 1000) : null;
+
+  if (existing) {
+    await db
+      .update(invoices)
+      .set({
+        status,
+        amountCents: invoice.amount_paid || invoice.total || existing.amountCents,
+        pdfUrl: invoice.invoice_pdf ?? existing.pdfUrl,
+        periodStart: periodStart ?? existing.periodStart,
+        periodEnd: periodEnd ?? existing.periodEnd,
+      })
+      .where(eq(invoices.id, existing.id));
+    return;
+  }
+
+  await db.insert(invoices).values({
+    accountId,
+    stripeInvoiceId: invoice.id ?? null,
+    periodStart,
+    periodEnd,
+    amountCents: invoice.amount_paid || invoice.total || 0,
+    status,
+    pdfUrl: invoice.invoice_pdf ?? null,
+  });
+}
+
+export async function POST(req: Request) {
+  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!secret) {
+    return NextResponse.json({ message: "Webhook secret not configured" }, { status: 500 });
+  }
+
+  const sig = req.headers.get("stripe-signature");
+  if (!sig) {
+    return NextResponse.json({ message: "Missing stripe-signature header" }, { status: 400 });
+  }
+
+  const rawBody = await req.text();
+
+  let event: Stripe.Event;
+  try {
+    event = stripe.webhooks.constructEvent(rawBody, sig, secret);
+  } catch (err) {
+    console.error("[webhook] signature verification failed", err);
+    return NextResponse.json({ message: "Invalid signature" }, { status: 400 });
+  }
+
+  try {
+    switch (event.type) {
+      case "invoice.payment_failed": {
+        const invoice = event.data.object as Stripe.Invoice;
+        const customerId = invoiceCustomerId(invoice);
+        if (!customerId) break;
+        const account = await findAccountByStripeCustomerId(customerId);
+        if (!account) break;
+
+        await db
+          .update(accounts)
+          .set({ status: "grace_period", updatedAt: new Date() })
+          .where(eq(accounts.id, account.id));
+        await upsertInvoiceRow(account.id, invoice, "failed");
+
+        // TODO (Step 9 — notifications, not built yet): send a billing-alert email here
+        // ("your payment failed, you have X days before your dashboard goes read-only"). Not
+        // faking a send — Step 9's notification service doesn't exist yet, just logging.
+        console.log(`[webhook] account ${account.id} moved to grace_period (payment failed)`);
+        break;
+      }
+
+      case "invoice.payment_succeeded": {
+        const invoice = event.data.object as Stripe.Invoice;
+        const customerId = invoiceCustomerId(invoice);
+        if (!customerId) break;
+        const account = await findAccountByStripeCustomerId(customerId);
+        if (!account) break;
+
+        await db
+          .update(accounts)
+          .set({ status: "active", updatedAt: new Date() })
+          .where(eq(accounts.id, account.id));
+        await upsertInvoiceRow(account.id, invoice, "paid");
+
+        // TODO (Step 9): reactivation-confirmation email if this was a recovery from
+        // grace_period — not built yet, same reasoning as above.
+        console.log(`[webhook] account ${account.id} moved to active (payment succeeded)`);
+        break;
+      }
+
+      case "customer.subscription.deleted": {
+        const subscription = event.data.object as Stripe.Subscription;
+        const customerId =
+          typeof subscription.customer === "string" ? subscription.customer : subscription.customer.id;
+        const account = await findAccountByStripeCustomerId(customerId);
+        if (!account) break;
+
+        await db
+          .update(accounts)
+          .set({ status: "suspended", updatedAt: new Date() })
+          .where(eq(accounts.id, account.id));
+
+        const localSub = await db.query.subscriptions.findFirst({
+          where: eq(subscriptions.accountId, account.id),
+        });
+        if (localSub) {
+          await db
+            .update(subscriptions)
+            .set({ status: "canceled", updatedAt: new Date() })
+            .where(eq(subscriptions.id, localSub.id));
+        }
+
+        console.log(`[webhook] account ${account.id} moved to suspended (subscription deleted)`);
+        break;
+      }
+
+      case "invoice.upcoming": {
+        // Safety-net sync (§8): move any subscription still on an old Stripe Price to the
+        // current one, and (for agencies) defensively re-verify billable_quantity.
+        const invoice = event.data.object as Stripe.Invoice;
+        const customerId = invoiceCustomerId(invoice);
+        if (!customerId) break;
+        const account = await findAccountByStripeCustomerId(customerId);
+        if (!account) break;
+
+        const localSub = await db.query.subscriptions.findFirst({
+          where: eq(subscriptions.accountId, account.id),
+        });
+        if (!localSub?.stripeSubscriptionId) break;
+
+        const plan = await getDefaultPricingPlan();
+        if (plan.stripePriceId) {
+          const stripeSub = await stripe.subscriptions.retrieve(localSub.stripeSubscriptionId);
+          const item = stripeSub.items.data[0];
+          if (item && item.price.id !== plan.stripePriceId) {
+            await stripe.subscriptionItems.update(item.id, { price: plan.stripePriceId });
+            console.log(
+              `[webhook] account ${account.id}'s subscription item moved to current Price ${plan.stripePriceId} (safety-net sync)`
+            );
+          }
+          // Re-read after a possible price change so the local row's status/amount reflect reality.
+          const refreshed = item && item.price.id !== plan.stripePriceId
+            ? await stripe.subscriptions.retrieve(localSub.stripeSubscriptionId)
+            : stripeSub;
+          await db
+            .update(subscriptions)
+            .set({ status: mapStripeSubscriptionStatus(refreshed.status), updatedAt: new Date() })
+            .where(eq(subscriptions.id, localSub.id));
+        }
+
+        if (account.type === "agency") {
+          await syncAgencySubscriptionQuantity(account.id);
+        }
+        break;
+      }
+
+      default:
+        // Unhandled event types are expected/fine — we only act on the ones listed above.
+        break;
+    }
+  } catch (err) {
+    console.error(`[webhook] handler error for event ${event.type}`, err);
+    return NextResponse.json({ message: "Webhook handler error" }, { status: 500 });
+  }
+
+  return NextResponse.json({ received: true });
 }

@@ -451,3 +451,12 @@ export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
 export const invoicesRelations = relations(invoices, ({ one }) => ({
   account: one(accounts, { fields: [invoices.accountId], references: [accounts.id] }),
 }));
+
+// ---------------------------------------------------------------------------------------
+// Inferred row types (Step 8 — used by lib/stripe/*.ts so those modules don't have to redeclare
+// shapes that already exist here).
+// ---------------------------------------------------------------------------------------
+export type Account = typeof accounts.$inferSelect;
+export type PricingPlan = typeof pricingPlans.$inferSelect;
+export type Subscription = typeof subscriptions.$inferSelect;
+export type Invoice = typeof invoices.$inferSelect;
