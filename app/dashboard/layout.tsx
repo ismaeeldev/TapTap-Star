@@ -19,7 +19,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
             <Logo />
           </Link>
         </div>
-        <DashboardNav />
+        <DashboardNav
+          showClients={session?.user.accountType === "agency" && session?.user.agencyStatus === "approved"}
+        />
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">

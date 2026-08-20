@@ -120,3 +120,21 @@ export function parseAnalyticsFilters(searchParams: URLSearchParams): AnalyticsF
     deviceId: deviceId ?? undefined,
   };
 }
+
+// --- Step 7: agency / multi-client accounts ---
+
+export const createClientAccountSchema = z.object({
+  businessName: z.string().trim().min(1, "Business name is required").max(200),
+  ownerName: z.string().trim().min(1, "Owner name is required").max(200),
+  email: z.email("Enter a valid email address").trim().toLowerCase(),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(72, "Password is too long"),
+});
+export type CreateClientAccountInput = z.infer<typeof createClientAccountSchema>;
+
+export const agencyRejectSchema = z.object({
+  reason: z.string().trim().max(1000).optional(),
+});
+export type AgencyRejectInput = z.infer<typeof agencyRejectSchema>;
