@@ -60,7 +60,7 @@ export function PricingCard({
           </ul>
 
           <Button asChild size="hero" className="mt-8 w-full">
-            <Link href="/contact">Get started</Link>
+            <Link href="/signup">Get started</Link>
           </Button>
         </div>
       </AnimatedGradientBorder>

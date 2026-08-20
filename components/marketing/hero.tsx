@@ -100,7 +100,7 @@ export function MarketingHero() {
               0.1's one-per-page rule (see the Step 11 device-usage audit in
               04_PROJECT_STATE.md). */}
           <Button asChild size="hero">
-            <Link href="/contact">
+            <Link href="/signup">
               Get started <ArrowRight className="size-4" />
             </Link>
           </Button>

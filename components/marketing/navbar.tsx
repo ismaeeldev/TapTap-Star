@@ -56,7 +56,7 @@ export function MarketingNavbar() {
             <Link href="/login">Log in</Link>
           </Button>
           <Button asChild size="sm">
-            <Link href="/contact">Get started</Link>
+            <Link href="/signup">Get started</Link>
           </Button>
         </div>
 
@@ -87,7 +87,7 @@ export function MarketingNavbar() {
               <Link href="/login">Log in</Link>
             </Button>
             <Button asChild onClick={() => setMobileOpen(false)}>
-              <Link href="/contact">Get started</Link>
+              <Link href="/signup">Get started</Link>
             </Button>
           </div>
         </div>
