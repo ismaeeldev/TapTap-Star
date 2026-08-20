@@ -4,6 +4,7 @@ import { db } from "@/lib/db/client";
 import { devices, locations, employees } from "@/lib/db/schema";
 import { requireSession, authErrorResponse, AuthError } from "@/lib/auth/rbac";
 import { activateDeviceSchema } from "@/lib/validation";
+import { notify } from "@/lib/email/notify";
 
 // POST /api/devices/:id/activate — flips a device from `unassigned` to `active`, backing the
 // claim wizard's final "Activate Device" step. Verifies the device is currently `unassigned`
@@ -67,6 +68,16 @@ export async function POST(
       })
       .where(eq(devices.id, id))
       .returning();
+
+    // Trigger #3 (02_APPLICATION_FLOW.md §8): device activation confirmation, to the business
+    // owner. Uses the live request origin for the dashboard link, per the Step 4
+    // regression-watchlist rule against NEXT_PUBLIC_APP_URL for same-app URLs.
+    const appUrl = new URL(request.url).origin;
+    await notify(session.user.accountId, "device_activated", {
+      deviceCode: device.code,
+      locationName: location.name,
+      dashboardUrl: `${appUrl}/dashboard/devices/${updated.id}`,
+    });
 
     return NextResponse.json({ device: updated });
   } catch (err) {

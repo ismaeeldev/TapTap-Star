@@ -147,3 +147,12 @@ export const updatePricingPlanSchema = z.object({
   priceCents: z.coerce.number().int().min(100, "Price must be at least $1.00").max(100_000_000),
 });
 export type UpdatePricingPlanInput = z.infer<typeof updatePricingPlanSchema>;
+
+// --- Step 9: notifications (contact form) ---
+
+export const contactFormSchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(200),
+  email: z.email("Enter a valid email address").trim().toLowerCase(),
+  message: z.string().trim().min(1, "Message is required").max(5000),
+});
+export type ContactFormInput = z.infer<typeof contactFormSchema>;

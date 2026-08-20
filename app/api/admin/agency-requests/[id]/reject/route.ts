@@ -9,6 +9,7 @@ import { db } from "@/lib/db/client";
 import { accounts, auditLogs } from "@/lib/db/schema";
 import { requireRole, authErrorResponse } from "@/lib/auth/rbac";
 import { agencyRejectSchema } from "@/lib/validation";
+import { notify } from "@/lib/email/notify";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -49,6 +50,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       targetType: "account",
       targetId: id,
       metadataJson: parsed.data.reason ? { reason: parsed.data.reason } : null,
+    });
+
+    // Trigger #11: agency-request-rejected, with reason if given.
+    await notify(updated.id, "agency_request_rejected", {
+      reason: parsed.data.reason ?? null,
     });
 
     return NextResponse.json({ ok: true, accountId: updated.id, agencyStatus: updated.agencyStatus });

@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { accounts, users, emailVerificationTokens } from "@/lib/db/schema";
 import { signupSchema } from "@/lib/validation";
-import { sendVerificationEmail } from "@/lib/email/client";
+import { notify } from "@/lib/email/notify";
 import { createStripeCustomerAndSubscription } from "@/lib/stripe/subscription";
 
 const VERIFY_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24h
@@ -90,7 +90,7 @@ export async function POST(req: Request) {
   });
 
   const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/verify-email?token=${token}`;
-  await sendVerificationEmail(email, verifyUrl);
+  await notify(account.id, "verification", { verifyUrl, recipientEmail: email });
 
   return NextResponse.json({ ok: true, email }, { status: 201 });
 }

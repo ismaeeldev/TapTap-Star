@@ -4,6 +4,7 @@ import { encode } from "next-auth/jwt";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { emailVerificationTokens, users, accounts } from "@/lib/db/schema";
+import { notify } from "@/lib/email/notify";
 
 // Auth.js v5's default JWT session cookie name — "authjs.session-token" unprefixed on
 // http:// (local dev), "__Secure-authjs.session-token" when served over https. Must match
@@ -49,6 +50,14 @@ export async function GET(req: Request) {
     .update(emailVerificationTokens)
     .set({ usedAt: new Date() })
     .where(eq(emailVerificationTokens.id, record.id));
+
+  // Trigger #2 (02_APPLICATION_FLOW.md §8): welcome email fires on email verification. Fire-
+  // and-forget-safe — notify() never throws, so this can't break the login/redirect flow below.
+  await notify(account.id, "welcome", {
+    name: user.name,
+    dashboardUrl: `${appUrl}/dashboard`,
+    recipientEmail: user.email,
+  });
 
   // Log the user in via Auth.js: hand-issue a valid session JWT and set it as the session
   // cookie, matching the shape the `jwt`/`session` callbacks in lib/auth/auth.config.ts expect.

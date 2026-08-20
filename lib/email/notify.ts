@@ -1,0 +1,183 @@
+// Generic notification service — every notification in the app goes through notify(accountId,
+// type, payload) rather than call sites constructing raw emails inline. Backed by the
+// notification_events table (lib/db/schema.ts): every call inserts a row first, then renders +
+// sends the matching React Email template via Resend, then sets sentAt on success only — never
+// faked. Type -> template routing lives entirely inside this file (03_DATA_MODEL_AND_ARCHITECTURE.md
+// section 2, 05_MASTER_BUILD_GUIDE.md Step 9.2).
+import * as React from "react";
+import { eq } from "drizzle-orm";
+import { db } from "@/lib/db/client";
+import { accounts, notificationEvents, users } from "@/lib/db/schema";
+import { resend, FROM } from "@/lib/email/client";
+import { VerificationEmail } from "@/lib/email/templates/VerificationEmail";
+import { WelcomeEmail } from "@/lib/email/templates/WelcomeEmail";
+import { DeviceActivatedEmail } from "@/lib/email/templates/DeviceActivatedEmail";
+import { PerformanceSummaryEmail } from "@/lib/email/templates/PerformanceSummaryEmail";
+import { BillingAlertEmail } from "@/lib/email/templates/BillingAlertEmail";
+import { GracePeriodReminderEmail } from "@/lib/email/templates/GracePeriodReminderEmail";
+import { SuspensionEmail } from "@/lib/email/templates/SuspensionEmail";
+import { PaymentRecoveredEmail } from "@/lib/email/templates/PaymentRecoveredEmail";
+import { ContactFormAdminEmail } from "@/lib/email/templates/ContactFormAdminEmail";
+import { AgencyApprovedEmail } from "@/lib/email/templates/AgencyApprovedEmail";
+import { AgencyRejectedEmail } from "@/lib/email/templates/AgencyRejectedEmail";
+
+// The 11 triggers from 02_APPLICATION_FLOW.md section 8.
+export type NotificationType =
+  | "verification"
+  | "welcome"
+  | "device_activated"
+  | "performance_summary"
+  | "billing_alert"
+  | "grace_period_reminder"
+  | "suspension_notice"
+  | "payment_recovered"
+  | "contact_form_submitted"
+  | "agency_request_approved"
+  | "agency_request_rejected";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Payload = Record<string, any>;
+
+type Rendered = { subject: string; react: React.ReactElement };
+
+function render(type: NotificationType, payload: Payload): Rendered {
+  switch (type) {
+    case "verification":
+      return {
+        subject: "Verify your Taptapstar email",
+        react: React.createElement(VerificationEmail, { verifyUrl: payload.verifyUrl }),
+      };
+    case "welcome":
+      return {
+        subject: "Welcome to Taptapstar",
+        react: React.createElement(WelcomeEmail, {
+          name: payload.name,
+          dashboardUrl: payload.dashboardUrl,
+        }),
+      };
+    case "device_activated":
+      return {
+        subject: `Device ${payload.deviceCode} activated`,
+        react: React.createElement(DeviceActivatedEmail, {
+          deviceCode: payload.deviceCode,
+          locationName: payload.locationName,
+          dashboardUrl: payload.dashboardUrl,
+        }),
+      };
+    case "performance_summary":
+      return {
+        subject: `Your ${payload.periodLabel} performance summary`,
+        react: React.createElement(PerformanceSummaryEmail, {
+          accountName: payload.accountName,
+          periodLabel: payload.periodLabel,
+          totalScans: payload.totalScans,
+          trendPercent: payload.trendPercent ?? null,
+          topLocationName: payload.topLocationName ?? null,
+          dashboardUrl: payload.dashboardUrl,
+        }),
+      };
+    case "billing_alert":
+      return {
+        subject: "Your Taptapstar payment failed",
+        react: React.createElement(BillingAlertEmail, { billingUrl: payload.billingUrl }),
+      };
+    case "grace_period_reminder":
+      return {
+        subject: "Your grace period is ending soon",
+        react: React.createElement(GracePeriodReminderEmail, {
+          daysRemaining: payload.daysRemaining,
+          billingUrl: payload.billingUrl,
+        }),
+      };
+    case "suspension_notice":
+      return {
+        subject: "Your Taptapstar account has been suspended",
+        react: React.createElement(SuspensionEmail, { billingUrl: payload.billingUrl }),
+      };
+    case "payment_recovered":
+      return {
+        subject: "Your Taptapstar account is active again",
+        react: React.createElement(PaymentRecoveredEmail, { dashboardUrl: payload.dashboardUrl }),
+      };
+    case "contact_form_submitted":
+      return {
+        subject: `New contact form submission from ${payload.name}`,
+        react: React.createElement(ContactFormAdminEmail, {
+          name: payload.name,
+          email: payload.email,
+          message: payload.message,
+        }),
+      };
+    case "agency_request_approved":
+      return {
+        subject: "You're now a Taptapstar agency account",
+        react: React.createElement(AgencyApprovedEmail, { dashboardUrl: payload.dashboardUrl }),
+      };
+    case "agency_request_rejected":
+      return {
+        subject: "Your agency request was not approved",
+        react: React.createElement(AgencyRejectedEmail, { reason: payload.reason ?? null }),
+      };
+  }
+}
+
+/**
+ * Resolves the recipient email for an account-scoped notification: an explicit
+ * payload.recipientEmail always wins (used when the caller already has the exact user, e.g. a
+ * freshly-created signup); otherwise falls back to the account's owner user, then any user on
+ * the account, then the account's billing_email.
+ */
+async function resolveRecipient(accountId: string, payload: Payload): Promise<string | null> {
+  if (payload.recipientEmail) return payload.recipientEmail as string;
+
+  const owner = await db.query.users.findFirst({
+    where: eq(users.accountId, accountId),
+    orderBy: (u, { asc }) => [asc(u.createdAt)],
+  });
+  if (owner?.email) return owner.email;
+
+  const account = await db.query.accounts.findFirst({ where: eq(accounts.id, accountId) });
+  return account?.billingEmail ?? null;
+}
+
+/**
+ * Send a notification. Always inserts a notification_events row first; sets sentAt only on a
+ * confirmed successful Resend send. Never throws for a send failure — the row's null sentAt is
+ * the source of truth for "did this actually go out," per Step 9's explicit "don't fake success"
+ * requirement. Returns the notification_events row id.
+ */
+export async function notify(
+  accountId: string,
+  type: NotificationType,
+  payload: Payload = {}
+): Promise<string> {
+  const [event] = await db
+    .insert(notificationEvents)
+    .values({ accountId, type, payloadJson: payload })
+    .returning();
+
+  try {
+    const to = await resolveRecipient(accountId, payload);
+    if (!to) {
+      console.error(`[notify] no recipient resolved for account ${accountId}, type ${type}`);
+      return event.id;
+    }
+
+    const { subject, react } = render(type, payload);
+    const { error } = await resend.emails.send({ from: FROM, to, subject, react });
+
+    if (error) {
+      console.error(`[notify] Resend send failed for type ${type}:`, error);
+      return event.id;
+    }
+
+    await db
+      .update(notificationEvents)
+      .set({ sentAt: new Date() })
+      .where(eq(notificationEvents.id, event.id));
+  } catch (err) {
+    console.error(`[notify] unexpected error sending type ${type}:`, err);
+  }
+
+  return event.id;
+}

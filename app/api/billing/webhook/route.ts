@@ -18,6 +18,9 @@ import { accounts, invoices, subscriptions } from "@/lib/db/schema";
 import { stripe } from "@/lib/stripe/client";
 import { getDefaultPricingPlan } from "@/lib/stripe/pricing";
 import { syncAgencySubscriptionQuantity, mapStripeSubscriptionStatus } from "@/lib/stripe/subscription";
+import { notify } from "@/lib/email/notify";
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 async function findAccountByStripeCustomerId(customerId: string) {
   return db.query.accounts.findFirst({ where: eq(accounts.stripeCustomerId, customerId) });
@@ -99,9 +102,10 @@ export async function POST(req: Request) {
           .where(eq(accounts.id, account.id));
         await upsertInvoiceRow(account.id, invoice, "failed");
 
-        // TODO (Step 9 — notifications, not built yet): send a billing-alert email here
-        // ("your payment failed, you have X days before your dashboard goes read-only"). Not
-        // faking a send — Step 9's notification service doesn't exist yet, just logging.
+        // Trigger #5 (02_APPLICATION_FLOW.md §8): billing alert / grace period started.
+        await notify(account.id, "billing_alert", {
+          billingUrl: `${APP_URL}/dashboard/billing`,
+        });
         console.log(`[webhook] account ${account.id} moved to grace_period (payment failed)`);
         break;
       }
@@ -113,15 +117,26 @@ export async function POST(req: Request) {
         const account = await findAccountByStripeCustomerId(customerId);
         if (!account) break;
 
+        // Capture the status BEFORE updating it — trigger #8 (payment-recovered) must fire only
+        // on a genuine recovery from grace_period/suspended, never on a routine successful
+        // payment for an account that was already active.
+        const wasRecovering = account.status === "grace_period" || account.status === "suspended";
+
         await db
           .update(accounts)
           .set({ status: "active", updatedAt: new Date() })
           .where(eq(accounts.id, account.id));
         await upsertInvoiceRow(account.id, invoice, "paid");
 
-        // TODO (Step 9): reactivation-confirmation email if this was a recovery from
-        // grace_period — not built yet, same reasoning as above.
-        console.log(`[webhook] account ${account.id} moved to active (payment succeeded)`);
+        if (wasRecovering) {
+          // Trigger #8: reactivation confirmation — only for a genuine recovery.
+          await notify(account.id, "payment_recovered", {
+            dashboardUrl: `${APP_URL}/dashboard`,
+          });
+        }
+        console.log(
+          `[webhook] account ${account.id} moved to active (payment succeeded)${wasRecovering ? " — recovery" : ""}`
+        );
         break;
       }
 
@@ -147,6 +162,10 @@ export async function POST(req: Request) {
             .where(eq(subscriptions.id, localSub.id));
         }
 
+        // Trigger #7: suspension notice.
+        await notify(account.id, "suspension_notice", {
+          billingUrl: `${APP_URL}/dashboard/billing`,
+        });
         console.log(`[webhook] account ${account.id} moved to suspended (subscription deleted)`);
         break;
       }

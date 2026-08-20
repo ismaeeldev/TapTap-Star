@@ -9,8 +9,9 @@ if (!process.env.RESEND_API_KEY) {
 export const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Resend's shared sandbox domain — works without a verified custom domain, real requirement
-// for this environment since Taptapstar's own sending domain hasn't been verified yet.
-const FROM = "Taptapstar <onboarding@resend.dev>";
+// for this environment since Taptapstar's own sending domain hasn't been verified yet. Exported
+// so lib/email/notify.ts (Step 9) sends from the same address as this file's remaining sends.
+export const FROM = "Taptapstar <onboarding@resend.dev>";
 
 function wrapperHtml(title: string, bodyHtml: string) {
   return `<!doctype html>
@@ -33,20 +34,9 @@ function wrapperHtml(title: string, bodyHtml: string) {
 </html>`;
 }
 
-export async function sendVerificationEmail(to: string, verifyUrl: string) {
-  const html = wrapperHtml(
-    "Verify your email",
-    `<p style="color:#475569;font-size:14px;line-height:1.6;">Confirm your email address to activate your Taptapstar account.</p>
-     <p style="margin:24px 0;"><a href="${verifyUrl}" style="background:#1A56E8;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;">Verify email</a></p>
-     <p style="color:#94A3B8;font-size:12px;">This link expires in 24 hours. If you didn't create a Taptapstar account, you can ignore this email.</p>`
-  );
-  return resend.emails.send({
-    from: FROM,
-    to,
-    subject: "Verify your Taptapstar email",
-    html,
-  });
-}
+// sendVerificationEmail() was migrated to a real React Email component — see
+// lib/email/notify.ts's "verification" type / lib/email/templates/VerificationEmail.tsx. Removed
+// here so there is only one implementation of this email (Step 9 requirement).
 
 export async function sendPasswordResetEmail(to: string, resetUrl: string) {
   const html = wrapperHtml(

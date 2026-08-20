@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { users, emailVerificationTokens } from "@/lib/db/schema";
 import { forgotPasswordSchema as emailOnlySchema } from "@/lib/validation";
-import { sendVerificationEmail } from "@/lib/email/client";
+import { notify } from "@/lib/email/notify";
 
 const VERIFY_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
       expiresAt: new Date(Date.now() + VERIFY_TOKEN_TTL_MS),
     });
     const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/verify-email?token=${token}`;
-    await sendVerificationEmail(email, verifyUrl);
+    await notify(user.accountId, "verification", { verifyUrl, recipientEmail: email });
   }
 
   return NextResponse.json({ ok: true });

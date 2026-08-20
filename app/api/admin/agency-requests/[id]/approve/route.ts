@@ -7,6 +7,9 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { accounts, users } from "@/lib/db/schema";
 import { requireRole, authErrorResponse } from "@/lib/auth/rbac";
+import { notify } from "@/lib/email/notify";
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -44,6 +47,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       .update(users)
       .set({ role: "agency_admin", updatedAt: new Date() })
       .where(eq(users.accountId, id));
+
+    // Trigger #10 (02_APPLICATION_FLOW.md §8): agency-request-approved.
+    await notify(updated.id, "agency_request_approved", {
+      dashboardUrl: `${APP_URL}/dashboard`,
+    });
 
     return NextResponse.json({
       ok: true,
