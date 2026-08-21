@@ -188,14 +188,36 @@ export async function POST(req: Request) {
         if (plan.stripePriceId) {
           const stripeSub = await stripe.subscriptions.retrieve(localSub.stripeSubscriptionId);
           const item = stripeSub.items.data[0];
+          let priceChanged = false;
           if (item && item.price.id !== plan.stripePriceId) {
-            await stripe.subscriptionItems.update(item.id, { price: plan.stripePriceId });
-            console.log(
-              `[webhook] account ${account.id}'s subscription item moved to current Price ${plan.stripePriceId} (safety-net sync)`
-            );
+            try {
+              await stripe.subscriptionItems.update(item.id, { price: plan.stripePriceId });
+              priceChanged = true;
+              console.log(
+                `[webhook] account ${account.id}'s subscription item moved to current Price ${plan.stripePriceId} (safety-net sync)`
+              );
+            } catch (err) {
+              // Stripe rejects a price/quantity update on a subscription still in `incomplete`
+              // status (no payment method attached yet — the normal state for any account that
+              // signed up but hasn't visited the Customer Portal, per this app's
+              // payment_behavior: "default_incomplete" design) with a real, expected
+              // StripeInvalidRequestError, not a bug on our side. Log and skip the price move —
+              // it'll naturally succeed on a future invoice.upcoming once the subscription has a
+              // payment method — rather than letting this bubble up and 500 the whole webhook
+              // (which would also skip the agency-quantity re-verify below and cause Stripe to
+              // keep retrying an update that will keep failing for the same reason every time).
+              const stripeErr = err as { type?: string; message?: string };
+              if (stripeErr?.type === "StripeInvalidRequestError") {
+                console.log(
+                  `[webhook] account ${account.id}: skipped price safety-net sync — subscription not in an updatable state yet (${stripeErr.message})`
+                );
+              } else {
+                throw err;
+              }
+            }
           }
           // Re-read after a possible price change so the local row's status/amount reflect reality.
-          const refreshed = item && item.price.id !== plan.stripePriceId
+          const refreshed = priceChanged
             ? await stripe.subscriptions.retrieve(localSub.stripeSubscriptionId)
             : stripeSub;
           await db

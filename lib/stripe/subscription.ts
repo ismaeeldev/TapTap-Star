@@ -122,7 +122,29 @@ export async function syncAgencySubscriptionQuantity(agencyAccountId: string): P
     const stripeSub = await stripe.subscriptions.retrieve(sub.stripeSubscriptionId);
     const item = stripeSub.items.data[0];
     if (item) {
-      await stripe.subscriptionItems.update(item.id, { quantity });
+      try {
+        await stripe.subscriptionItems.update(item.id, { quantity });
+      } catch (err) {
+        // Same expected constraint as the invoice.upcoming webhook's price safety-net (see that
+        // handler's comment): Stripe rejects a quantity update on a subscription still in
+        // `incomplete` status (no payment method attached yet). Previously this threw straight
+        // out of the function, which meant the local `billableQuantity`/`amountCents` update
+        // below never ran either — an agency creating clients before ever visiting the Customer
+        // Portal would have its local managed-business count silently frozen at a stale value
+        // indefinitely (only `console.error`'d by the caller, no retry path, since a subscription
+        // with no payment method never generates real `invoice.upcoming` events to self-correct
+        // from). Now: log and continue to the local DB update regardless — the real Stripe
+        // quantity syncs on the next successful attempt once a payment method exists, but the
+        // app's own UI/DB reflects the true count in the meantime rather than a stale one.
+        const stripeErr = err as { type?: string; message?: string };
+        if (stripeErr?.type === "StripeInvalidRequestError") {
+          console.log(
+            `[syncAgencySubscriptionQuantity] account ${agencyAccountId}: skipped Stripe quantity push — subscription not in an updatable state yet (${stripeErr.message})`
+          );
+        } else {
+          throw err;
+        }
+      }
     }
   }
 
