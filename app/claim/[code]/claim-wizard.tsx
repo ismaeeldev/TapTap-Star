@@ -141,6 +141,9 @@ export function ClaimWizard({
           <span className="h-px w-4 bg-border-default" />
           <StepDot active={step === "confirm"} done={false} label="3" />
         </div>
+        <p className="mb-1 text-caption uppercase tracking-wide text-text-muted">
+          Activating device <span className="font-mono text-text-secondary">{code}</span>
+        </p>
         <CardTitle className="text-h3">
           {step === "location" && "Where is this device going?"}
           {step === "employee" && "Assign an employee (optional)"}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -177,8 +178,15 @@ export function BatchCreateForm() {
             </div>
           </div>
           <Button onClick={handleGenerate} disabled={generating}>
+            {generating && <Loader2 className="animate-spin" />}
             {generating ? "Generating…" : "Generate codes"}
           </Button>
+          {generating && Number(quantity) > 100 && (
+            <p className="text-caption text-text-muted">
+              Generating {quantity} codes and QR images — this can take a little while for large
+              batches, the page is still working.
+            </p>
+          )}
 
           {generateResult && (
             <div className="space-y-3 border-t border-border-default pt-4">
@@ -230,8 +238,15 @@ export function BatchCreateForm() {
             />
           </div>
           <Button onClick={handleImport} disabled={importing}>
+            {importing && <Loader2 className="animate-spin" />}
             {importing ? "Importing…" : "Import codes"}
           </Button>
+          {importing && (
+            <p className="text-caption text-text-muted">
+              Importing rows — for a large CSV (up to a few hundred rows) this can take a little
+              while, the page is still working.
+            </p>
+          )}
 
           {importResult && (
             <div className="space-y-2 border-t border-border-default pt-4">

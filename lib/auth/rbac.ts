@@ -27,7 +27,7 @@ export class AuthError extends Error {
 export async function requireSession(): Promise<Session> {
   const session = await auth();
   if (!session?.user) {
-    throw new AuthError("Not authenticated", 401);
+    throw new AuthError("Your session has expired — please log in again.", 401);
   }
   return session;
 }

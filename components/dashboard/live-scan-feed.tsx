@@ -2,7 +2,7 @@
 
 import useSWR from "swr";
 import { AnimatePresence, motion } from "framer-motion";
-import { Radio } from "lucide-react";
+import { Radio, WifiOff } from "lucide-react";
 import { listItemEnter } from "@/lib/motion";
 import { EmptyState } from "@/components/shared/empty-state";
 
@@ -49,10 +49,17 @@ export function LiveScanFeed({ deviceId, className }: { deviceId?: string; class
     );
   }
 
-  if (error) {
+  // Poll failed but we still have data from an earlier successful fetch (SWR keeps stale data
+  // around by default) — keep showing it rather than blanking the feed, but surface a clear
+  // "this may be stale" signal instead of silently pretending everything's fine (category 4,
+  // stuck/uncertain-state audit).
+  if (error && !data) {
     return (
       <div className={className}>
-        <p className="text-body-sm text-danger">Couldn&apos;t load the live scan feed.</p>
+        <p className="flex items-center gap-1.5 text-body-sm text-danger">
+          <WifiOff className="size-4 shrink-0" />
+          Couldn&apos;t load the live scan feed.
+        </p>
       </div>
     );
   }
@@ -74,6 +81,12 @@ export function LiveScanFeed({ deviceId, className }: { deviceId?: string; class
 
   return (
     <ul className={className}>
+      {error && (
+        <li className="mb-2 flex items-center gap-1.5 rounded-md bg-warning/10 px-3 py-2 text-caption text-warning">
+          <WifiOff className="size-3.5 shrink-0" />
+          Connection issue — showing the last update, retrying automatically…
+        </li>
+      )}
       <AnimatePresence initial={false}>
         {scans.map((scan) => (
           <motion.li
