@@ -117,6 +117,22 @@ export function DevicesSearch({ initialStatus }: { initialStatus?: string }) {
           icon={Radio}
           title="No devices match your filters"
           description="Try a different code, status, or source."
+          action={
+            (q || status !== ANY || source !== ANY) && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setQ("");
+                  setStatus(ANY);
+                  setSource(ANY);
+                  setPage(1);
+                }}
+              >
+                Clear filters
+              </Button>
+            )
+          }
         />
       ) : (
         <>

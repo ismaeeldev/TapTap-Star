@@ -71,6 +71,20 @@ export function AccountsSearch() {
           icon={Search}
           title="No accounts match your search"
           description="Try a different name or email."
+          action={
+            q && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setQ("");
+                  setPage(1);
+                }}
+              >
+                Clear search
+              </Button>
+            )
+          }
         />
       ) : (
         <>

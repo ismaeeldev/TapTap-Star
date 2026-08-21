@@ -89,8 +89,10 @@ export default function SignupPage() {
               aria-invalid={!!errors.password}
               {...register("password")}
             />
-            {errors.password && (
+            {errors.password ? (
               <p className="text-body-sm text-danger">{errors.password.message}</p>
+            ) : (
+              <p className="text-caption text-text-muted">At least 8 characters.</p>
             )}
           </div>
 

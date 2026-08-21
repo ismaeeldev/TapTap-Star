@@ -487,8 +487,10 @@ type ContactMessage = {
 
 function ContactInbox({ initial }: { initial: ContactMessage[] }) {
   const [messages, setMessages] = useState(initial);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   async function setStatus(id: string, status: "read" | "resolved") {
+    setUpdatingId(id);
     try {
       const res = await fetch(`/api/admin/support/messages/${id}`, {
         method: "PATCH",
@@ -504,6 +506,8 @@ function ContactInbox({ initial }: { initial: ContactMessage[] }) {
       toast.success(`Marked as ${status}`);
     } catch {
       toast.error("Failed to update message — check your connection and try again");
+    } finally {
+      setUpdatingId(null);
     }
   }
 
@@ -533,13 +537,23 @@ function ContactInbox({ initial }: { initial: ContactMessage[] }) {
           <p className="mt-2 text-body-sm text-text-secondary">{m.message}</p>
           <div className="mt-3 flex gap-2">
             {m.status !== "read" && (
-              <Button variant="ghost" size="sm" onClick={() => void setStatus(m.id, "read")}>
-                Mark read
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={updatingId === m.id}
+                onClick={() => void setStatus(m.id, "read")}
+              >
+                {updatingId === m.id ? "Updating…" : "Mark read"}
               </Button>
             )}
             {m.status !== "resolved" && (
-              <Button variant="ghost" size="sm" onClick={() => void setStatus(m.id, "resolved")}>
-                Mark resolved
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={updatingId === m.id}
+                onClick={() => void setStatus(m.id, "resolved")}
+              >
+                {updatingId === m.id ? "Updating…" : "Mark resolved"}
               </Button>
             )}
           </div>
