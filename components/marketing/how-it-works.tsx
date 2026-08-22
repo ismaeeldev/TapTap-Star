@@ -2,7 +2,8 @@
 
 import { motion } from "framer-motion";
 import { Smartphone, Star, Wifi } from "lucide-react";
-import { staggerContainer, fadeUp } from "@/lib/motion";
+import { SectionHeader } from "@/components/marketing/section-header";
+import { staggerContainer, fadeUp, marketingInView } from "@/lib/motion";
 
 const STEPS = [
   {
@@ -27,11 +28,15 @@ const STEPS = [
 // directly here, only as loose inspiration for the rounded-plate silhouette). Pure SVG/CSS.
 function FlowIllustration() {
   return (
-    <svg
+    <motion.svg
       viewBox="0 0 480 200"
       className="mx-auto w-full max-w-xl"
       role="img"
       aria-label="A customer taps a Taptapstar device, which redirects them to leave a Google review"
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={marketingInView}
+      transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
     >
       <defs>
         <linearGradient id="plateGradient" x1="0" y1="0" x2="1" y2="1">
@@ -61,8 +66,8 @@ function FlowIllustration() {
         strokeDasharray="6 6"
         initial={{ pathLength: 0, opacity: 0 }}
         whileInView={{ pathLength: 1, opacity: 1 }}
-        viewport={{ once: true, margin: "-10%" }}
-        transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
+        viewport={marketingInView}
+        transition={{ duration: 1.1, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
       />
 
       {/* google review star card */}
@@ -77,27 +82,17 @@ function FlowIllustration() {
       ))}
       <rect x="345" y="105" width="100" height="6" rx="3" fill="var(--bg-muted)" />
       <rect x="345" y="118" width="70" height="6" rx="3" fill="var(--bg-muted)" />
-    </svg>
+    </motion.svg>
   );
 }
 
 export function HowItWorks() {
   return (
-    <section id="how-it-works" className="mx-auto max-w-6xl px-6 py-24 md:px-8">
-      <motion.div
-        variants={fadeUp}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, margin: "-15%" }}
-        className="mx-auto max-w-2xl text-center"
-      >
-        <p className="text-caption font-semibold uppercase tracking-wide text-brand">
-          How it works
-        </p>
-        <h2 className="mt-3 font-display text-display-lg font-bold text-text-primary">
-          From tap to five stars in seconds
-        </h2>
-      </motion.div>
+    <section id="how-it-works" className="mx-auto max-w-6xl px-6 py-20 md:px-8 md:py-28">
+      <SectionHeader
+        eyebrow="How it works"
+        title="From tap to five stars in seconds"
+      />
 
       <div className="mt-14">
         <FlowIllustration />
@@ -107,7 +102,7 @@ export function HowItWorks() {
         variants={staggerContainer}
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true, margin: "-15%" }}
+        viewport={marketingInView}
         className="mt-14 grid gap-8 md:grid-cols-3"
       >
         {STEPS.map((step, i) => (

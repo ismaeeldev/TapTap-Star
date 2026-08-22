@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Trophy, Medal } from "lucide-react";
-import { fadeUp } from "@/lib/motion";
+import { fadeUp, marketingInView, staggerContainer } from "@/lib/motion";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -23,13 +23,13 @@ const MEDAL_COLOR: Record<number, string> = {
 
 export function LeaderboardShowcase() {
   return (
-    <section id="leaderboard" className="mx-auto max-w-6xl px-6 py-24 md:px-8">
-      <div className="grid items-center gap-12 md:grid-cols-2">
+    <section id="leaderboard" className="mx-auto max-w-6xl px-6 py-20 md:px-8 md:py-28">
+      <div className="grid items-center gap-12 md:grid-cols-2 md:gap-16">
         <motion.div
           variants={fadeUp}
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, margin: "-15%" }}
+          viewport={marketingInView}
         >
           <p className="text-caption font-semibold uppercase tracking-wide text-brand">
             Gamification
@@ -55,10 +55,10 @@ export function LeaderboardShowcase() {
         </motion.div>
 
         <motion.div
-          variants={fadeUp}
+          variants={staggerContainer}
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, margin: "-15%" }}
+          viewport={marketingInView}
         >
           <Card variant="standard" className="p-6">
             <p className="mb-4 text-caption font-semibold uppercase tracking-wide text-text-muted">
@@ -66,8 +66,9 @@ export function LeaderboardShowcase() {
             </p>
             <ul className="space-y-1">
               {ROWS.map((row) => (
-                <li
+                <motion.li
                   key={row.rank}
+                  variants={fadeUp}
                   className="flex items-center gap-4 rounded-md px-2 py-3 transition-colors hover:bg-bg-muted"
                 >
                   <span
@@ -87,7 +88,7 @@ export function LeaderboardShowcase() {
                   <span className="text-body-sm font-semibold tabular-nums text-text-primary">
                     {row.scans}
                   </span>
-                </li>
+                </motion.li>
               ))}
             </ul>
           </Card>

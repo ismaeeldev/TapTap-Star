@@ -6,7 +6,7 @@ import { Check } from "lucide-react";
 import { AnimatedGradientBorder } from "@/components/shared/animated-gradient-border";
 import { useSpotlightHover } from "@/components/shared/use-spotlight-hover";
 import { Button } from "@/components/ui/button";
-import { fadeUp } from "@/lib/motion";
+import { fadeUp, marketingInView } from "@/lib/motion";
 import { formatPriceCents } from "@/lib/format";
 
 const FEATURES = [
@@ -35,7 +35,7 @@ export function PricingCard({
       variants={fadeUp}
       initial="hidden"
       whileInView="visible"
-      viewport={{ once: true, margin: "-15%" }}
+      viewport={marketingInView}
       className="mx-auto max-w-md"
     >
       <AnimatedGradientBorder>

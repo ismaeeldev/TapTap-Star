@@ -3,17 +3,17 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
-import { fadeUp } from "@/lib/motion";
+import { fadeUp, marketingInView } from "@/lib/motion";
 import { ContactForm } from "@/app/(marketing)/contact/contact-form";
 
 export function ContactSection() {
   return (
-    <section id="contact" className="mx-auto max-w-3xl px-6 py-24 md:px-8">
+    <section id="contact" className="mx-auto max-w-3xl px-6 py-20 md:px-8 md:py-28">
       <motion.div
         variants={fadeUp}
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true, margin: "-15%" }}
+        viewport={marketingInView}
         className="text-center"
       >
         <p className="text-caption font-semibold uppercase tracking-wide text-brand">
@@ -35,7 +35,7 @@ export function ContactSection() {
         variants={fadeUp}
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true, margin: "-15%" }}
+        viewport={marketingInView}
         className="mt-10"
       >
         <Card variant="standard" className="p-8">

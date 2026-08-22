@@ -3,7 +3,8 @@
 import { motion } from "framer-motion";
 import { Building2, Store, Users2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { staggerContainer, fadeUp } from "@/lib/motion";
+import { SectionHeader } from "@/components/marketing/section-header";
+import { staggerContainer, fadeUp, marketingInView } from "@/lib/motion";
 
 const CASES = [
   {
@@ -25,26 +26,22 @@ const CASES = [
 
 export function UseCases() {
   return (
-    <section className="mx-auto max-w-6xl px-6 py-24 md:px-8">
-      <div className="mx-auto max-w-2xl text-center">
-        <p className="text-caption font-semibold uppercase tracking-wide text-brand">
-          Use cases
-        </p>
-        <h2 className="mt-3 font-display text-display-lg font-bold text-text-primary">
-          Built for any business that wants more reviews
-        </h2>
-      </div>
+    <section className="mx-auto max-w-6xl px-6 py-20 md:px-8 md:py-28">
+      <SectionHeader
+        eyebrow="Use cases"
+        title="Built for any business that wants more reviews"
+      />
 
       <motion.div
         variants={staggerContainer}
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true, margin: "-10%" }}
+        viewport={marketingInView}
         className="mt-14 grid gap-6 md:grid-cols-3"
       >
         {CASES.map((c) => (
           <motion.div key={c.title} variants={fadeUp}>
-            <Card variant="standard" className="h-full p-6">
+            <Card variant="standard" className="h-full p-6 transition-shadow duration-300 hover:shadow-md">
               <div className="flex size-11 items-center justify-center rounded-full bg-brand-subtle text-brand">
                 <c.icon className="size-5" />
               </div>

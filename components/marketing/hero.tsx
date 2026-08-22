@@ -23,37 +23,73 @@ if (typeof window !== "undefined") {
 
 export function MarketingHero() {
   const sectionRef = React.useRef<HTMLElement>(null);
+  const contentRef = React.useRef<HTMLDivElement>(null);
   const cardsRef = React.useRef<HTMLDivElement>(null);
   const reduceMotion = useReducedMotion();
 
   React.useEffect(() => {
     if (reduceMotion) return;
-    if (!sectionRef.current || !cardsRef.current) return;
 
-    // Signature GSAP ScrollTrigger moment (theme section 5.2): as the user scrolls from the hero
-    // into "how it works", the floating preview cards pin briefly and settle/scale down while the
-    // hero content recedes — a pin + reveal transition, not a plain scroll-past.
-    const ctx = gsap.context(() => {
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: "top top",
-          end: "+=60%",
-          scrub: 0.6,
-          pin: cardsRef.current,
-        },
-      });
-      tl.to(cardsRef.current, { scale: 0.85, y: 40, opacity: 0.4, ease: "none" });
-    }, sectionRef);
+    const section = sectionRef.current;
+    const content = contentRef.current;
+    const cards = cardsRef.current;
+    if (!section || !content || !cards) return;
 
-    return () => ctx.revert();
+    // Signature GSAP ScrollTrigger moment (theme section 5.2): pin the hero while the floating
+    // preview cards settle and the copy recedes, then release into "how it works".
+    //
+    // Critical: do NOT put overflow:hidden on the pinned section (or any ancestor) — that breaks
+    // ScrollTrigger pinning and leaves transforms/spacers in a bad state that skips or freezes
+    // Framer whileInView reveals on every section below the hero.
+    //
+    // Preview cards are `hidden` below md — pinning an empty/zero-height block on mobile
+    // corrupts pin-spacing and breaks the scroll-reveal chain underneath.
+    const mm = gsap.matchMedia();
+
+    mm.add("(min-width: 768px)", () => {
+      const ctx = gsap.context(() => {
+        const tl = gsap.timeline({
+          scrollTrigger: {
+            trigger: section,
+            start: "top top",
+            end: "+=65%",
+            scrub: 0.65,
+            pin: true,
+            pinSpacing: true,
+            anticipatePin: 1,
+            invalidateOnRefresh: true,
+          },
+        });
+
+        tl.to(content, { opacity: 0.2, y: -40, ease: "none" }, 0).to(
+          cards,
+          { scale: 0.88, y: 48, opacity: 0.35, ease: "none" },
+          0
+        );
+      }, section);
+
+      return () => ctx.revert();
+    });
+
+    const refreshId = window.requestAnimationFrame(() => ScrollTrigger.refresh());
+    const onLoad = () => ScrollTrigger.refresh();
+    window.addEventListener("load", onLoad);
+
+    return () => {
+      window.cancelAnimationFrame(refreshId);
+      window.removeEventListener("load", onLoad);
+      mm.revert();
+    };
   }, [reduceMotion]);
 
   return (
-    <section ref={sectionRef} className="relative overflow-hidden pt-36 pb-20 md:pt-44 md:pb-28">
-      <GradientMesh className="absolute inset-0 -z-10" />
+    <section ref={sectionRef} className="relative pt-36 pb-16 md:pt-44 md:pb-24">
+      {/* Clip mesh only — never the section — so pin spacers stay correct. */}
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
+        <GradientMesh className="absolute inset-0" />
+      </div>
 
-      <div className="mx-auto max-w-5xl px-6 text-center md:px-8">
+      <div ref={contentRef} className="mx-auto max-w-5xl px-6 text-center will-change-transform md:px-8">
         <motion.div
           variants={staggerContainer}
           initial="hidden"
@@ -110,7 +146,7 @@ export function MarketingHero() {
         </motion.div>
       </div>
 
-      <div ref={cardsRef}>
+      <div ref={cardsRef} className="will-change-transform">
         <HeroPreviewCards />
       </div>
     </section>

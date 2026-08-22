@@ -5,11 +5,11 @@ import type { Variants } from "framer-motion";
 // consistent across the app.
 
 export const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 12 },
+  hidden: { opacity: 0, y: 16 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] },
+    transition: { duration: 0.55, ease: [0.16, 1, 0.3, 1] },
   },
 };
 
@@ -25,9 +25,16 @@ export const scaleIn: Variants = {
 export const staggerContainer: Variants = {
   hidden: {},
   visible: {
-    transition: { staggerChildren: 0.06 },
+    transition: { staggerChildren: 0.08, delayChildren: 0.04 },
   },
 };
+
+// Shared whileInView config for marketing scroll reveals. Prefer `amount` over aggressive
+// negative margins — those miss triggers after GSAP pin-spacers recalculate layout.
+export const marketingInView = {
+  once: true,
+  amount: 0.25,
+} as const;
 
 // Word-by-word hero headline reveal (theme section 0.1) — split text into words, wrap each in
 // a motion.span using this variant inside a parent using staggerContainer.

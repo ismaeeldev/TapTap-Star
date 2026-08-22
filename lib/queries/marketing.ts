@@ -7,19 +7,36 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { pricingPlans } from "@/lib/db/schema";
 
-export async function getPublicPricingPlan() {
-  const plan = await db.query.pricingPlans.findFirst({
+const FALLBACK_PLAN = {
+  name: "Taptapstar",
+  priceCents: 2990,
+  currency: "usd",
+} as const;
+
+async function fetchDefaultPlan() {
+  return db.query.pricingPlans.findFirst({
     where: eq(pricingPlans.planKey, "default"),
   });
-  // Fallback only protects against a genuinely missing seed row (should never happen in a real
-  // deployment) — never a substitute for the real DB read.
-  return (
-    plan ?? {
-      name: "Taptapstar",
-      priceCents: 2990,
-      currency: "usd",
+}
+
+export async function getPublicPricingPlan() {
+  // Neon scale-to-zero can fail the first HTTP request with `fetch failed` while the
+  // compute wakes; one short retry covers that. Fallback only if both attempts fail
+  // (or the seed row is genuinely missing) so the marketing page does not 500.
+  try {
+    const plan = await fetchDefaultPlan();
+    return plan ?? FALLBACK_PLAN;
+  } catch (err) {
+    console.error("[getPublicPricingPlan] DB read failed, retrying:", err);
+    try {
+      await new Promise((r) => setTimeout(r, 600));
+      const plan = await fetchDefaultPlan();
+      return plan ?? FALLBACK_PLAN;
+    } catch (retryErr) {
+      console.error("[getPublicPricingPlan] retry failed, using fallback:", retryErr);
+      return FALLBACK_PLAN;
     }
-  );
+  }
 }
 
 export { formatPriceCents } from "@/lib/format";

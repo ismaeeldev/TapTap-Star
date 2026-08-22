@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { fadeUp } from "@/lib/motion";
+import { fadeUp, marketingInView } from "@/lib/motion";
 import { formatPriceCents } from "@/lib/format";
 
 // Reused identically on the homepage FAQ section and the standalone /faq route (no duplicated
@@ -53,7 +53,7 @@ export function FaqAccordion({
       variants={fadeUp}
       initial="hidden"
       whileInView="visible"
-      viewport={{ once: true, margin: "-15%" }}
+      viewport={marketingInView}
       className="mx-auto max-w-2xl"
     >
       <Accordion type="single" collapsible className="rounded-lg border border-border-default bg-bg-card px-6">

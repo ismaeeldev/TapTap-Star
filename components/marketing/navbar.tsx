@@ -28,11 +28,19 @@ export function MarketingNavbar() {
   });
 
   return (
-    <header className="fixed inset-x-0 top-0 z-40">
+    // Outer padding (not margin on the bar) keeps mx-auto centering stable when the glass
+    // pill appears — swapping mx-auto for md:mx-6 used to shove the bar off-center.
+    <header
+      className={cn(
+        "fixed inset-x-0 top-0 z-40 transition-[padding] duration-300",
+        scrolled && "px-3 md:px-6"
+      )}
+    >
       <motion.div
         className={cn(
           "mx-auto flex max-w-7xl items-center justify-between px-6 py-4 transition-all duration-300 md:px-8",
-          scrolled && "mt-3 rounded-full border border-white/12 bg-bg-card/70 px-6 shadow-md backdrop-blur-xl md:mx-6 dark:border-white/8 dark:bg-bg-card/40"
+          scrolled &&
+            "mt-3 rounded-full border border-white/12 bg-bg-card/70 shadow-md backdrop-blur-xl dark:border-white/8 dark:bg-bg-card/40"
         )}
       >
         <Link href="/" className="shrink-0">

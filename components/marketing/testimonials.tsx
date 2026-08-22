@@ -3,7 +3,8 @@
 import { motion } from "framer-motion";
 import { Quote } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { staggerContainer, fadeUp } from "@/lib/motion";
+import { SectionHeader } from "@/components/marketing/section-header";
+import { staggerContainer, fadeUp, marketingInView } from "@/lib/motion";
 
 // Placeholder content, clearly labeled as illustrative rather than claiming real customers yet —
 // structured so real quotes can drop in later without a rebuild (per the master prompt's
@@ -31,26 +32,19 @@ const SAMPLE_QUOTES = [
 
 export function Testimonials() {
   return (
-    <section className="bg-bg-surface py-24">
+    <section className="bg-bg-surface py-20 md:py-28">
       <div className="mx-auto max-w-6xl px-6 md:px-8">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="text-caption font-semibold uppercase tracking-wide text-brand">
-            What businesses will say
-          </p>
-          <h2 className="mt-3 font-display text-display-lg font-bold text-text-primary">
-            Illustrative sample quotes
-          </h2>
-          <p className="mt-3 text-body-sm text-text-muted">
-            We&apos;re early — these are sample quotes showing the kind of feedback we expect,
-            not real customer reviews yet.
-          </p>
-        </div>
+        <SectionHeader
+          eyebrow="What businesses will say"
+          title="Illustrative sample quotes"
+          description={"We're early — these are sample quotes showing the kind of feedback we expect, not real customer reviews yet."}
+        />
 
         <motion.div
           variants={staggerContainer}
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, margin: "-10%" }}
+          viewport={marketingInView}
           className="mt-14 grid gap-6 md:grid-cols-3"
         >
           {SAMPLE_QUOTES.map((t, i) => (

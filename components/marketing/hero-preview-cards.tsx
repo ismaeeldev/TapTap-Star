@@ -24,7 +24,7 @@ function GlassCard({ className, children }: { className?: string; children: Reac
 
 export function HeroPreviewCards() {
   return (
-    <div className="relative mx-auto mt-16 hidden h-[22rem] max-w-3xl md:block" aria-hidden="true">
+    <div className="relative mx-auto mt-14 hidden h-[22rem] max-w-3xl md:block" aria-hidden="true">
       {/* Mini stat-tile card */}
       <GlassCard className="absolute top-0 left-4 hero-float-1">
         <p className="text-caption font-semibold uppercase tracking-wide text-text-muted">

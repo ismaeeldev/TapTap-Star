@@ -8,6 +8,7 @@ import { PricingCard } from "@/components/marketing/pricing-card";
 import { Testimonials } from "@/components/marketing/testimonials";
 import { FaqAccordion } from "@/components/marketing/faq-accordion";
 import { ContactSection } from "@/components/marketing/contact-section";
+import { SectionHeader } from "@/components/marketing/section-header";
 import { getPublicPricingPlan } from "@/lib/queries/marketing";
 
 // Force dynamic rendering (not static prerender) so the pricing card always reflects the live
@@ -31,13 +32,8 @@ export default async function MarketingHomePage() {
       <Benefits />
       <UseCases />
 
-      <section id="pricing" className="mx-auto max-w-6xl px-6 py-24 md:px-8">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="text-caption font-semibold uppercase tracking-wide text-brand">Pricing</p>
-          <h2 className="mt-3 font-display text-display-lg font-bold text-text-primary">
-            One plan. Everything included.
-          </h2>
-        </div>
+      <section id="pricing" className="mx-auto max-w-6xl px-6 py-20 md:px-8 md:py-28">
+        <SectionHeader eyebrow="Pricing" title="One plan. Everything included." />
         <div className="mt-14">
           <PricingCard priceCents={plan.priceCents} currency={plan.currency} />
         </div>
@@ -45,13 +41,8 @@ export default async function MarketingHomePage() {
 
       <Testimonials />
 
-      <section id="faq" className="mx-auto max-w-6xl px-6 py-24 md:px-8">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="text-caption font-semibold uppercase tracking-wide text-brand">FAQ</p>
-          <h2 className="mt-3 font-display text-display-lg font-bold text-text-primary">
-            Common questions
-          </h2>
-        </div>
+      <section id="faq" className="mx-auto max-w-6xl px-6 py-20 md:px-8 md:py-28">
+        <SectionHeader eyebrow="FAQ" title="Common questions" />
         <div className="mt-14">
           <FaqAccordion priceCents={plan.priceCents} currency={plan.currency} />
         </div>

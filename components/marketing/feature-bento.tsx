@@ -4,8 +4,9 @@ import * as React from "react";
 import { motion } from "framer-motion";
 import { BarChart3, MapPinned, Trophy, Users } from "lucide-react";
 import { BentoGrid, BentoTile } from "@/components/shared/bento-grid";
+import { SectionHeader } from "@/components/marketing/section-header";
 import { useSpotlightHover } from "@/components/shared/use-spotlight-hover";
-import { staggerContainer, fadeUp } from "@/lib/motion";
+import { staggerContainer, fadeUp, marketingInView } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 // One tile per required content item (04_PROJECT_STATE.md / scope §5.1): employee tracking,
@@ -26,7 +27,13 @@ function SpotlightTile({
 }) {
   const { onMouseMove } = useSpotlightHover<HTMLDivElement>();
   return (
-    <motion.div variants={fadeUp} className={cn(span === "hero" && "sm:col-span-2 sm:row-span-2 lg:col-span-2 lg:row-span-2", span === "wide" && "sm:col-span-2 lg:col-span-2")}>
+    <motion.div
+      variants={fadeUp}
+      className={cn(
+        span === "hero" && "sm:col-span-2 sm:row-span-2 lg:col-span-2 lg:row-span-2",
+        span === "wide" && "sm:col-span-2 lg:col-span-2"
+      )}
+    >
       <BentoTile onMouseMove={onMouseMove} glow={glow} className={cn("h-full", className)}>
         {children}
       </BentoTile>
@@ -36,21 +43,17 @@ function SpotlightTile({
 
 export function FeatureBento() {
   return (
-    <section id="features" className="mx-auto max-w-6xl px-6 py-24 md:px-8">
-      <div className="mx-auto max-w-2xl text-center">
-        <p className="text-caption font-semibold uppercase tracking-wide text-brand">
-          Why Taptapstar
-        </p>
-        <h2 className="mt-3 font-display text-display-lg font-bold text-text-primary">
-          Everything you need to turn scans into growth
-        </h2>
-      </div>
+    <section id="features" className="mx-auto max-w-6xl px-6 py-20 md:px-8 md:py-28">
+      <SectionHeader
+        eyebrow="Why Taptapstar"
+        title="Everything you need to turn scans into growth"
+      />
 
       <motion.div
         variants={staggerContainer}
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true, margin: "-10%" }}
+        viewport={marketingInView}
         className="mt-14"
       >
         <BentoGrid>
@@ -70,10 +73,18 @@ export function FeatureBento() {
               </div>
               <div className="mt-6 flex items-end gap-1.5" aria-hidden="true">
                 {[40, 65, 50, 80, 60, 95, 75].map((h, i) => (
-                  <div
+                  <motion.div
                     key={i}
-                    className="w-6 rounded-t bg-brand/70"
+                    className="w-6 origin-bottom rounded-t bg-brand/70"
                     style={{ height: `${h}px` }}
+                    initial={{ scaleY: 0 }}
+                    whileInView={{ scaleY: 1 }}
+                    viewport={marketingInView}
+                    transition={{
+                      duration: 0.55,
+                      delay: 0.2 + i * 0.05,
+                      ease: [0.16, 1, 0.3, 1],
+                    }}
                   />
                 ))}
               </div>

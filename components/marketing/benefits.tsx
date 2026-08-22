@@ -2,7 +2,8 @@
 
 import { motion } from "framer-motion";
 import { CheckCircle2 } from "lucide-react";
-import { staggerContainer, fadeUp } from "@/lib/motion";
+import { SectionHeader } from "@/components/marketing/section-header";
+import { staggerContainer, fadeUp, marketingInView } from "@/lib/motion";
 
 const BENEFITS = [
   {
@@ -25,22 +26,18 @@ const BENEFITS = [
 
 export function Benefits() {
   return (
-    <section className="bg-bg-surface py-24">
+    <section className="bg-bg-surface py-20 md:py-28">
       <div className="mx-auto max-w-6xl px-6 md:px-8">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="text-caption font-semibold uppercase tracking-wide text-brand">
-            Benefits
-          </p>
-          <h2 className="mt-3 font-display text-display-lg font-bold text-text-primary">
-            Why businesses switch to Taptapstar
-          </h2>
-        </div>
+        <SectionHeader
+          eyebrow="Benefits"
+          title="Why businesses switch to Taptapstar"
+        />
 
         <motion.div
           variants={staggerContainer}
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, margin: "-10%" }}
+          viewport={marketingInView}
           className="mt-14 grid gap-8 sm:grid-cols-2"
         >
           {BENEFITS.map((b) => (
