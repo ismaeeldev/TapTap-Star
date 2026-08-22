@@ -7,6 +7,7 @@ import { accounts } from "@/lib/db/schema";
 import { Logo } from "@/components/shared/logo";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { Button } from "@/components/ui/button";
+import { OnboardingTour } from "@/components/dashboard/onboarding-tour";
 import { DashboardNav } from "./dashboard-nav";
 
 // Minimal dashboard shell (sidebar nav + topbar) — first real shell for the /dashboard route
@@ -65,6 +66,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
             </span>
           </div>
           <div className="flex items-center gap-2">
+            {session?.user && (
+              <OnboardingTour accountId={session.user.accountId} showClients={showClients} />
+            )}
             <ThemeToggle />
             <form
               action={async () => {

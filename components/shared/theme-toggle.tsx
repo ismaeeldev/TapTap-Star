@@ -17,7 +17,7 @@ export function ThemeToggle() {
   }, []);
 
   if (!mounted) {
-    return <Button variant="ghost" size="icon" aria-label="Toggle theme" disabled />;
+    return <Button variant="ghost" size="icon" aria-label="Toggle theme" data-tour="theme-toggle" disabled />;
   }
 
   const isDark = resolvedTheme === "dark";
@@ -27,6 +27,7 @@ export function ThemeToggle() {
       variant="ghost"
       size="icon"
       aria-label="Toggle theme"
+      data-tour="theme-toggle"
       onClick={() => setTheme(isDark ? "light" : "dark")}
     >
       {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}

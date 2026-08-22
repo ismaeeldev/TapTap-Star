@@ -84,13 +84,13 @@ export function Logo({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-2.5 font-display font-bold tracking-tight",
+        "inline-flex items-center gap-2.5 font-display font-bold",
         className
       )}
     >
       <LogoMark variant={variant} />
       {!iconOnly && (
-        <span className="text-h4 text-text-primary">
+        <span className="text-h4 tracking-[0.01em] text-text-primary">
           Taptap<span className="gradient-text">star</span>
         </span>
       )}

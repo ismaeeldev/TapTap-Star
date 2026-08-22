@@ -15,13 +15,13 @@ import {
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
-  { href: "/dashboard", label: "Overview", icon: LayoutGrid, exact: true },
-  { href: "/dashboard/devices", label: "Devices", icon: Radio },
-  { href: "/dashboard/locations", label: "Locations", icon: MapPin },
-  { href: "/dashboard/employees", label: "Employees", icon: Users },
-  { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
-  { href: "/dashboard/settings", label: "Settings", icon: Settings },
+  { href: "/dashboard", label: "Overview", icon: LayoutGrid, exact: true, tourId: "nav-dashboard" },
+  { href: "/dashboard/devices", label: "Devices", icon: Radio, tourId: "nav-devices" },
+  { href: "/dashboard/locations", label: "Locations", icon: MapPin, tourId: "nav-locations" },
+  { href: "/dashboard/employees", label: "Employees", icon: Users, tourId: "nav-employees" },
+  { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3, tourId: "nav-analytics" },
+  { href: "/dashboard/billing", label: "Billing", icon: CreditCard, tourId: "nav-billing" },
+  { href: "/dashboard/settings", label: "Settings", icon: Settings, tourId: "nav-settings" },
 ];
 
 // "Clients" only shows for approved agency accounts — /dashboard/clients itself also enforces
@@ -31,19 +31,20 @@ export function DashboardNav({ showClients = false }: { showClients?: boolean })
   const items = showClients
     ? [
         ...NAV_ITEMS.slice(0, 4),
-        { href: "/dashboard/clients", label: "Clients", icon: Building2 },
+        { href: "/dashboard/clients", label: "Clients", icon: Building2, tourId: "nav-clients" },
         ...NAV_ITEMS.slice(4),
       ]
     : NAV_ITEMS;
 
   return (
     <nav className="flex gap-1 overflow-x-auto lg:flex-col lg:gap-0.5 lg:overflow-visible">
-      {items.map(({ href, label, icon: Icon, exact }) => {
+      {items.map(({ href, label, icon: Icon, exact, tourId }) => {
         const active = exact ? pathname === href : pathname.startsWith(href);
         return (
           <Link
             key={href}
             href={href}
+            data-tour={tourId}
             className={cn(
               "relative flex shrink-0 items-center gap-2.5 rounded-md py-2.5 pr-3 pl-3 text-body-sm font-medium whitespace-nowrap transition-all duration-150 lg:pl-4",
               active
