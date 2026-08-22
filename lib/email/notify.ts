@@ -5,10 +5,12 @@
 // faked. Type -> template routing lives entirely inside this file (03_DATA_MODEL_AND_ARCHITECTURE.md
 // section 2, 05_MASTER_BUILD_GUIDE.md Step 9.2).
 import * as React from "react";
+import { render as renderEmailHtml } from "@react-email/render";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { accounts, notificationEvents, users } from "@/lib/db/schema";
-import { resend, FROM } from "@/lib/email/client";
+import { sendMail } from "@/lib/email/client";
+// import { resend, FROM } from "@/lib/email/client"; // Resend — see lib/email/client.ts's comment
 import { VerificationEmail } from "@/lib/email/templates/VerificationEmail";
 import { WelcomeEmail } from "@/lib/email/templates/WelcomeEmail";
 import { DeviceActivatedEmail } from "@/lib/email/templates/DeviceActivatedEmail";
@@ -169,10 +171,17 @@ export async function notify(
     }
 
     const { subject, react } = render(type, payload);
-    const { error } = await resend.emails.send({ from: FROM, to, subject, react });
+    // Resend accepted a React element directly (`react: react`); Nodemailer needs rendered
+    // HTML/text, so the React Email template is rendered here instead of inside the client.
+    const [html, text] = await Promise.all([
+      renderEmailHtml(react),
+      renderEmailHtml(react, { plainText: true }),
+    ]);
+    const { error } = await sendMail({ to, subject, html, text });
+    // const { error } = await resend.emails.send({ from: FROM, to, subject, react }); // Resend
 
     if (error) {
-      console.error(`[notify] Resend send failed for type ${type}:`, error);
+      console.error(`[notify] send failed for type ${type}:`, error);
       return { id: event.id, sent: false };
     }
 
