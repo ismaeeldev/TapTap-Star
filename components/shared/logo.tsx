@@ -1,48 +1,69 @@
+"use client";
+
 import * as React from "react";
+import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 
-// The mark: gradient rounded square, tap-ripple + review-star motif. Fixed intrinsic size
-// (size-9) — callers scale the whole lockup via Logo's className (e.g. `scale-110`) rather than
-// resizing the mark alone, so the mark/wordmark ratio never drifts out of proportion.
-function LogoMark({ className }: { className?: string }) {
+function LogoMark({
+  className,
+  variant = "light",
+}: {
+  className?: string;
+  variant?: "light" | "dark";
+}) {
+  const uid = React.useId().replace(/:/g, "");
+  const gradId = `tts-mark-grad-${variant}-${uid}`;
+  const glowId = `tts-mark-glow-${uid}`;
+  const from = variant === "dark" ? "#3B82F6" : "#1A56E8";
+  const to = variant === "dark" ? "#2DD4BF" : "#14B8A6";
+
   return (
     <svg
       viewBox="0 0 40 40"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={cn("size-9 shrink-0", className)}
+      className={cn("size-9 shrink-0 drop-shadow-sm", className)}
       aria-hidden="true"
     >
       <defs>
-        <linearGradient id="tts-mark-grad" x1="4" y1="4" x2="36" y2="36" gradientUnits="userSpaceOnUse">
-          <stop stopColor="var(--brand)" />
-          <stop offset="1" stopColor="var(--gradient-2)" />
+        <linearGradient id={gradId} x1="4" y1="4" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+          <stop stopColor={from} />
+          <stop offset="1" stopColor={to} />
         </linearGradient>
+        {variant === "dark" && (
+          <filter id={glowId} x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="1.2" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        )}
       </defs>
-      <rect width="40" height="40" rx="10" fill="url(#tts-mark-grad)" />
-      {/* Tap ripples */}
+      <rect
+        width="40"
+        height="40"
+        rx="10"
+        fill={`url(#${gradId})`}
+        filter={variant === "dark" ? `url(#${glowId})` : undefined}
+      />
       <path
         d="M11 20c0-2.2 1-4.2 2.6-5.5M8.5 20c0-3.4 1.6-6.4 4.1-8.3"
         stroke="white"
-        strokeWidth="2"
+        strokeWidth="2.2"
         strokeLinecap="round"
         opacity="0.95"
       />
-      {/* Star */}
       <path
         d="M26.5 12.2l1.35 4.15h4.35l-3.5 2.55 1.35 4.15-3.55-2.55-3.55 2.55 1.35-4.15-3.5-2.55h4.35L26.5 12.2z"
         fill="white"
       />
-      {/* Tap center dot */}
-      <circle cx="14.5" cy="20" r="2.25" fill="white" />
+      <circle cx="14.5" cy="20" r="2.35" fill="white" />
     </svg>
   );
 }
 
-// The app-wide logo — gradient mark + "Taptaptar" wordmark, "star" in the brand gradient.
-// `className` on the outer span is the sizing lever for callers (e.g. `scale-110` for a
-// standalone branded page vs. the bare default for compact chrome like a navbar/sidebar) —
-// see the call sites for the actual per-placement sizes chosen and why.
+// App-wide logo — light/dark mark variants + "Taptapstar" wordmark. Callers size via className.
 export function Logo({
   className,
   iconOnly = false,
@@ -50,9 +71,24 @@ export function Logo({
   className?: string;
   iconOnly?: boolean;
 }) {
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    const id = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  const variant = mounted && resolvedTheme === "dark" ? "dark" : "light";
+
   return (
-    <span className={cn("inline-flex items-center gap-2.5 font-display font-bold tracking-tight", className)}>
-      <LogoMark />
+    <span
+      className={cn(
+        "inline-flex items-center gap-2.5 font-display font-bold tracking-tight",
+        className
+      )}
+    >
+      <LogoMark variant={variant} />
       {!iconOnly && (
         <span className="text-h4 text-text-primary">
           Taptap<span className="gradient-text">star</span>

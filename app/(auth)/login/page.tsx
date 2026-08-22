@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,6 +29,7 @@ function LoginPageContent() {
   // Preserves the /claim/[code] destination through the login step (02_APPLICATION_FLOW.md
   // section 3's auth-gate requirement — must not lose the device code from context).
   const callbackUrl = searchParams.get("callbackUrl");
+  const [showPassword, setShowPassword] = React.useState(false);
   const {
     register,
     handleSubmit,
@@ -57,18 +58,21 @@ function LoginPageContent() {
   };
 
   return (
-    <Card variant="glass">
-      <CardHeader>
-        <CardTitle className="text-h3">Welcome back</CardTitle>
-        <CardDescription>Log in to your Taptapstar dashboard.</CardDescription>
+    <Card variant="glass" className="shadow-xl">
+      <CardHeader className="space-y-2">
+        <CardTitle className="font-display text-display-md">Welcome back</CardTitle>
+        <CardDescription className="text-body-sm">
+          Log in to your dashboard to track scans, rankings, and reviews.
+        </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
           <div className="space-y-1.5">
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
               type="email"
+              placeholder="you@business.com"
               autoComplete="email"
               aria-invalid={!!errors.email}
               {...register("email")}
@@ -79,7 +83,7 @@ function LoginPageContent() {
           </div>
 
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <Label htmlFor="password">Password</Label>
               <Link
                 href="/forgot-password"
@@ -88,13 +92,25 @@ function LoginPageContent() {
                 Forgot password?
               </Link>
             </div>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              aria-invalid={!!errors.password}
-              {...register("password")}
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Your password"
+                autoComplete="current-password"
+                aria-invalid={!!errors.password}
+                className="pr-11"
+                {...register("password")}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-1.5 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-text-muted transition-colors hover:bg-bg-card hover:text-text-primary"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
             {errors.password && (
               <p className="text-body-sm text-danger">{errors.password.message}</p>
             )}
@@ -114,10 +130,10 @@ function LoginPageContent() {
           </AnimatedGradientBorder>
         </form>
 
-        <p className="mt-6 text-center text-body-sm text-text-muted">
+        <p className="mt-8 text-center text-body-sm text-text-muted">
           Don&apos;t have an account?{" "}
           <Link href="/signup" className="font-medium text-brand hover:underline">
-            Sign up
+            Sign up free
           </Link>
         </p>
       </CardContent>
