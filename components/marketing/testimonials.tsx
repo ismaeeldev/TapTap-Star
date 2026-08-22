@@ -3,30 +3,31 @@
 import { motion } from "framer-motion";
 import { Quote } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { SectionHeader } from "@/components/marketing/section-header";
 import { staggerContainer, fadeUp, marketingInView } from "@/lib/motion";
 
 // Placeholder content, clearly labeled as illustrative rather than claiming real customers yet —
 // structured so real quotes can drop in later without a rebuild (per the master prompt's
-// explicit instruction not to read as fabricated testimonials).
-const SAMPLE_QUOTES = [
+// explicit instruction not to read as fabricated testimonials — no invented names/businesses
+// presented as real reviews, ever, even when the visual design gets a polish pass). Each entry
+// is framed as "what a [persona] could say" rather than a named byline, which is what makes the
+// honesty legible in the design itself, not just in a disclaimer paragraph.
+const PREVIEW_QUOTES = [
   {
     quote:
-      "This is the kind of result a business running Taptapstar could expect: a steady lift in Google reviews within the first month, with zero extra effort from the front counter.",
-    name: "Sample quote",
-    role: "Illustrative — restaurant owner",
+      "A steady lift in Google reviews within the first month, with zero extra effort from the front counter — that's the kind of result we're aiming for.",
+    persona: "A restaurant owner",
   },
   {
     quote:
-      "The employee leaderboard is exactly the kind of feature that gets a team genuinely competing to ask for reviews.",
-    name: "Sample quote",
-    role: "Illustrative — multi-location chain",
+      "A leaderboard the team actually checks, because it turns asking for reviews into something worth competing over instead of a chore.",
+    persona: "A multi-location manager",
   },
   {
     quote:
-      "Being able to see analytics per location, without juggling spreadsheets, is the whole pitch for an agency managing several clients.",
-    name: "Sample quote",
-    role: "Illustrative — agency partner",
+      "Per-location analytics without juggling spreadsheets for every client — that's the whole pitch for an agency managing several businesses at once.",
+    persona: "An agency partner",
   },
 ];
 
@@ -36,8 +37,8 @@ export function Testimonials() {
       <div className="mx-auto max-w-6xl px-6 md:px-8">
         <SectionHeader
           eyebrow="What businesses will say"
-          title="Illustrative sample quotes"
-          description={"We're early — these are sample quotes showing the kind of feedback we expect, not real customer reviews yet."}
+          title="A preview, not a review — yet"
+          description="We're early, so there are no real customer reviews to show yet. Here's the kind of feedback we're building toward."
         />
 
         <motion.div
@@ -47,14 +48,16 @@ export function Testimonials() {
           viewport={marketingInView}
           className="mt-14 grid gap-6 md:grid-cols-3"
         >
-          {SAMPLE_QUOTES.map((t, i) => (
+          {PREVIEW_QUOTES.map((t, i) => (
             <motion.div key={i} variants={fadeUp}>
               <Card variant="standard" className="h-full p-6">
-                <Quote className="size-6 text-brand/50" />
+                <div className="flex items-start justify-between gap-3">
+                  <Quote className="size-6 text-brand/50" />
+                  <Badge variant="neutral">Preview</Badge>
+                </div>
                 <p className="mt-4 text-body-sm text-text-secondary italic">&ldquo;{t.quote}&rdquo;</p>
                 <div className="mt-5 border-t border-border-default pt-4">
-                  <p className="text-body-sm font-semibold text-text-primary">{t.name}</p>
-                  <p className="text-caption text-text-muted">{t.role}</p>
+                  <p className="text-caption text-text-muted">What {t.persona.toLowerCase()} could say</p>
                 </div>
               </Card>
             </motion.div>
