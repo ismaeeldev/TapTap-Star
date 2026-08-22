@@ -25,7 +25,10 @@ const STATUS_MAP: Record<DomainStatus, { variant: React.ComponentProps<typeof Ba
   suspended: { variant: "deactivated", label: "Suspended" },
 };
 
-export function StatusBadge({ status }: { status: DomainStatus }) {
-  const entry = STATUS_MAP[status];
+export function StatusBadge({ status }: { status: string }) {
+  const entry = STATUS_MAP[status as DomainStatus] ?? {
+    variant: "unassigned" as const,
+    label: status,
+  };
   return <Badge variant={entry.variant}>{entry.label}</Badge>;
 }

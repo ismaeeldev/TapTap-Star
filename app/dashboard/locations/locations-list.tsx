@@ -113,6 +113,13 @@ function AddButton() {
   );
 }
 
+// Named export for the empty-state CTA — do NOT attach this as LocationsList.AddButton.
+// Static properties on Client Components are unreliable across the RSC import boundary and
+// can resolve to undefined (→ dashboard error boundary "Try again").
+export function LocationsAddButton() {
+  return <AddButton />;
+}
+
 function EditDeleteControls({ location }: { location: LocationRow }) {
   const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
@@ -261,4 +268,3 @@ export function LocationsList({ locations }: { locations: LocationRow[] }) {
   );
 }
 
-LocationsList.AddButton = AddButton;

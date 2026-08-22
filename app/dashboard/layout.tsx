@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { auth, signOut } from "@/lib/auth/auth";
 import { isApprovedAgencySession } from "@/lib/auth/rbac";
 import { db } from "@/lib/db/client";
+import { withDbRetry } from "@/lib/db/retry";
 import { accounts } from "@/lib/db/schema";
 import { Logo } from "@/components/shared/logo";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
@@ -22,8 +23,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // the master prompt's explicit "shown across the dashboard shell" instruction. This is display
   // only — it does NOT block any device redirect (app/r/[code]/route.ts is untouched and has no
   // billing awareness at all, by design).
+  // withDbRetry: Neon scale-to-zero can fail the first wake; without this the whole dashboard
+  // (including /locations) falls into error.tsx "Try again".
   const account = session?.user
-    ? await db.query.accounts.findFirst({ where: eq(accounts.id, session.user.accountId) })
+    ? await withDbRetry("DashboardLayout.account", () =>
+        db.query.accounts.findFirst({ where: eq(accounts.id, session.user.accountId) })
+      )
     : null;
 
   // Live DB re-check (isApprovedAgencySession), not session.user.accountType/agencyStatus — same
@@ -32,7 +37,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // own already-open session could reach /dashboard/clients directly by URL (that page does the
   // live re-check correctly) but never see the "Clients" nav link appear here until a re-login —
   // a real, confusing inconsistency this global shell must not reintroduce.
-  const showClients = session ? await isApprovedAgencySession(session) : false;
+  const showClients = session
+    ? await withDbRetry("DashboardLayout.showClients", () => isApprovedAgencySession(session))
+    : false;
 
   const initials = (session?.user.name ?? "")
     .split(/\s+/)

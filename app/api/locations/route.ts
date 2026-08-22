@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
+import { withDbRetry } from "@/lib/db/retry";
 import { locations } from "@/lib/db/schema";
 import { requireSession, authErrorResponse } from "@/lib/auth/rbac";
 import { locationSchema } from "@/lib/validation";
@@ -10,10 +11,12 @@ import { locationSchema } from "@/lib/validation";
 export async function GET() {
   try {
     const session = await requireSession();
-    const rows = await db.query.locations.findMany({
-      where: eq(locations.accountId, session.user.accountId),
-      orderBy: (loc, { desc }) => [desc(loc.createdAt)],
-    });
+    const rows = await withDbRetry("GET /api/locations", () =>
+      db.query.locations.findMany({
+        where: eq(locations.accountId, session.user.accountId),
+        orderBy: (loc, { desc }) => [desc(loc.createdAt)],
+      })
+    );
     return NextResponse.json({ locations: rows });
   } catch (err) {
     const { message, status } = authErrorResponse(err);

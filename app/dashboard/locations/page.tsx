@@ -2,25 +2,33 @@ import { MapPin } from "lucide-react";
 import { eq, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth/auth";
 import { db } from "@/lib/db/client";
+import { withDbRetry } from "@/lib/db/retry";
 import { locations, scans } from "@/lib/db/schema";
 import { EmptyState } from "@/components/shared/empty-state";
-import { LocationsList } from "./locations-list";
+import { LocationsAddButton, LocationsList } from "./locations-list";
 
 export default async function LocationsPage() {
   const session = await auth();
   if (!session?.user) return null;
 
-  const rows = await db.query.locations.findMany({
-    where: eq(locations.accountId, session.user.accountId),
-    orderBy: (l, { desc }) => [desc(l.createdAt)],
+  const accountId = session.user.accountId;
+
+  const { rows, counts } = await withDbRetry("LocationsPage", async () => {
+    const rows = await db.query.locations.findMany({
+      where: eq(locations.accountId, accountId),
+      orderBy: (l, { desc }) => [desc(l.createdAt)],
+    });
+
+    const counts = await db
+      .select({ locationId: scans.locationId, count: sql<number>`count(*)::int` })
+      .from(scans)
+      .innerJoin(locations, eq(scans.locationId, locations.id))
+      .where(eq(locations.accountId, accountId))
+      .groupBy(scans.locationId);
+
+    return { rows, counts };
   });
 
-  const counts = await db
-    .select({ locationId: scans.locationId, count: sql<number>`count(*)::int` })
-    .from(scans)
-    .innerJoin(locations, eq(scans.locationId, locations.id))
-    .where(eq(locations.accountId, session.user.accountId))
-    .groupBy(scans.locationId);
   const countMap = new Map(counts.map((c) => [c.locationId, c.count]));
 
   const locationRows = rows.map((l) => ({
@@ -47,7 +55,7 @@ export default async function LocationsPage() {
           icon={MapPin}
           title="No locations yet"
           description="Add your first location to start assigning devices and employees to it."
-          action={<LocationsList.AddButton />}
+          action={<LocationsAddButton />}
         />
       ) : (
         <LocationsList locations={locationRows} />

@@ -36,7 +36,9 @@ function getTransporter(): nodemailer.Transporter | null {
   if (cachedTransporter) return cachedTransporter;
 
   const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS } = process.env;
-  if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS) {
+  // Gmail app passwords are often copied with spaces; strip them so auth stays reliable.
+  const pass = (SMTP_PASS ?? "").replace(/\s+/g, "");
+  if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !pass) {
     console.error(
       "[email] SMTP is not configured — set SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS in .env.local"
     );
@@ -47,9 +49,23 @@ function getTransporter(): nodemailer.Transporter | null {
     host: SMTP_HOST,
     port: Number(SMTP_PORT),
     secure: process.env.SMTP_SECURE === "true" || Number(SMTP_PORT) === 465,
-    auth: { user: SMTP_USER, pass: SMTP_PASS },
+    auth: { user: SMTP_USER, pass },
   });
   return cachedTransporter;
+}
+
+/** Optional health check — verifies SMTP auth/handshake without sending a message. */
+export async function verifySmtp(): Promise<{ ok: true } | { ok: false; message: string }> {
+  const transporter = getTransporter();
+  if (!transporter) {
+    return { ok: false, message: "SMTP is not configured — see .env.local" };
+  }
+  try {
+    await transporter.verify();
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, message: err instanceof Error ? err.message : String(err) };
+  }
 }
 
 export type SendResult = { error: { message: string } | null };

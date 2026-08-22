@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { and, eq, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth/auth";
 import { db } from "@/lib/db/client";
+import { withDbRetry } from "@/lib/db/retry";
 import { locations, devices, scans } from "@/lib/db/schema";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { StatTile } from "@/components/shared/stat-tile";
@@ -14,22 +15,31 @@ export default async function LocationDetailPage({
   const session = await auth();
   if (!session?.user) return null;
   const { id } = await params;
+  const accountId = session.user.accountId;
 
-  const location = await db.query.locations.findFirst({
-    where: and(eq(locations.id, id), eq(locations.accountId, session.user.accountId)),
-  });
+  const { location, deviceRows, scanCountRow } = await withDbRetry(
+    "LocationDetailPage",
+    async () => {
+      const location = await db.query.locations.findFirst({
+        where: and(eq(locations.id, id), eq(locations.accountId, accountId)),
+      });
+      if (!location) return { location: null, deviceRows: [], scanCountRow: null };
+
+      const deviceRows = await db.query.devices.findMany({
+        where: eq(devices.locationId, id),
+        with: { employee: true },
+        orderBy: (d, { desc }) => [desc(d.createdAt)],
+      });
+
+      const [scanCountRow] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(scans)
+        .where(eq(scans.locationId, id));
+
+      return { location, deviceRows, scanCountRow };
+    }
+  );
   if (!location) notFound();
-
-  const deviceRows = await db.query.devices.findMany({
-    where: eq(devices.locationId, id),
-    with: { employee: true },
-    orderBy: (d, { desc }) => [desc(d.createdAt)],
-  });
-
-  const [scanCountRow] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(scans)
-    .where(eq(scans.locationId, id));
 
   return (
     <div className="max-w-3xl space-y-6">
