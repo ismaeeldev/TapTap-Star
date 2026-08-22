@@ -25,7 +25,7 @@ export default async function EmployeePrivateViewPage({
     return (
       <GradientMesh className="flex min-h-svh flex-col items-center justify-center px-4 py-12 text-center">
         <div className="mb-8">
-          <Logo />
+          <Logo className="scale-110" />
         </div>
         <div className="flex size-16 items-center justify-center rounded-full bg-brand-subtle text-brand">
           <LinkIcon className="size-8" />
@@ -52,7 +52,7 @@ export default async function EmployeePrivateViewPage({
     <GradientMesh className="flex min-h-svh flex-col items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
         <div className="mb-8 flex justify-center">
-          <Logo />
+          <Logo className="scale-110" />
         </div>
 
         <div className="rounded-lg border border-border-default bg-bg-card p-6 text-center shadow-lg">

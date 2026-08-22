@@ -9,7 +9,7 @@ export default function DeactivatedDevicePage() {
   return (
     <GradientMesh className="flex min-h-svh flex-col items-center justify-center px-4 py-12 text-center">
       <div className="mb-8">
-        <Logo />
+        <Logo className="scale-110" />
       </div>
       <div className="flex size-16 items-center justify-center rounded-full bg-brand-subtle text-brand">
         <PowerOff className="size-8" />

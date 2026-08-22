@@ -9,7 +9,7 @@ import { Logo } from "@/components/shared/logo";
 export default function NotFound() {
   return (
     <GradientMesh className="flex min-h-screen flex-col items-center justify-center gap-6 px-6 text-center">
-      <Logo />
+      <Logo className="scale-110" />
       <div className="flex size-16 items-center justify-center rounded-full bg-brand-subtle text-brand">
         <Compass className="size-8" />
       </div>

@@ -26,7 +26,7 @@ export default async function ClaimPage({
     return (
       <GradientMesh className="flex min-h-svh flex-col items-center justify-center px-4 py-12 text-center">
         <div className="mb-8">
-          <Logo />
+          <Logo className="scale-110" />
         </div>
         <div className="flex size-16 items-center justify-center rounded-full bg-brand-subtle text-brand">
           <SearchX className="size-8" />
@@ -50,7 +50,7 @@ export default async function ClaimPage({
     return (
       <GradientMesh className="flex min-h-svh flex-col items-center justify-center px-4 py-12 text-center">
         <div className="mb-8">
-          <Logo />
+          <Logo className="scale-110" />
         </div>
         <div className="flex size-16 items-center justify-center rounded-full bg-brand-subtle text-brand">
           <PowerOff className="size-8" />
@@ -73,7 +73,7 @@ export default async function ClaimPage({
   return (
     <GradientMesh className="flex min-h-svh flex-col items-center justify-center px-4 py-12">
       <Link href="/" className="mb-8 no-underline">
-        <Logo />
+        <Logo className="scale-110" />
       </Link>
       <div className="w-full max-w-lg">
         <ClaimWizard code={code} deviceId={device.id} accountId={session.user.accountId} />
