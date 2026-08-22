@@ -24,6 +24,10 @@ function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email") ?? "";
   const error = searchParams.get("error");
+  // "0" means signup's own send attempt failed (see app/api/auth/signup/route.ts's `emailSent`) —
+  // absent (arriving here any other way, e.g. a bookmark) defaults to the normal copy rather than
+  // assuming failure.
+  const sendFailed = searchParams.get("sent") === "0";
   const [isResending, setIsResending] = React.useState(false);
 
   React.useEffect(() => {
@@ -45,7 +49,10 @@ function VerifyEmailContent() {
         body: JSON.stringify({ email }),
       });
       if (!res.ok) throw new Error();
-      toast.success("Verification email sent — check your inbox.");
+      // This endpoint deliberately never confirms whether the send actually succeeded (see its
+      // route comment — doing so would leak whether the email is registered at all), so the copy
+      // here stays honestly hedged rather than claiming a guaranteed "sent".
+      toast.success("If that email is registered and not yet verified, a new link is on its way.");
     } catch {
       toast.error("Couldn't resend the email. Please try again shortly.");
     } finally {
@@ -59,9 +66,22 @@ function VerifyEmailContent() {
         <div className="mb-2 flex size-14 items-center justify-center rounded-full bg-brand-subtle text-brand">
           <MailCheck className="size-7" />
         </div>
-        <CardTitle className="text-h3">Check your inbox</CardTitle>
+        <CardTitle className="text-h3">
+          {sendFailed ? "One more step" : "Check your inbox"}
+        </CardTitle>
         <CardDescription>
-          {email ? (
+          {sendFailed ? (
+            <>
+              We couldn&apos;t send a verification email
+              {email ? (
+                <>
+                  {" "}
+                  to <span className="font-medium text-text-primary">{email}</span>
+                </>
+              ) : null}{" "}
+              just now. Click &ldquo;Resend&rdquo; below to try again.
+            </>
+          ) : email ? (
             <>
               We sent a verification link to <span className="font-medium text-text-primary">{email}</span>.
               Click it to activate your account.

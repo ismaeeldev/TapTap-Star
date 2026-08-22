@@ -140,17 +140,22 @@ async function resolveRecipient(accountId: string, payload: Payload): Promise<st
   return account?.billingEmail ?? null;
 }
 
+export type NotifyResult = { id: string; sent: boolean };
+
 /**
  * Send a notification. Always inserts a notification_events row first; sets sentAt only on a
  * confirmed successful Resend send. Never throws for a send failure — the row's null sentAt is
  * the source of truth for "did this actually go out," per Step 9's explicit "don't fake success"
- * requirement. Returns the notification_events row id.
+ * requirement. Returns `{ id, sent }` — `sent` is false on any failure (no recipient, Resend
+ * error, or thrown exception). Every existing call site was already fire-and-forget (`await
+ * notify(...)` with the return value discarded), so this is safe to add without touching them;
+ * only signup/resend-verification need `sent` to avoid showing a false "email sent" message.
  */
 export async function notify(
   accountId: string,
   type: NotificationType,
   payload: Payload = {}
-): Promise<string> {
+): Promise<NotifyResult> {
   const [event] = await db
     .insert(notificationEvents)
     .values({ accountId, type, payloadJson: payload })
@@ -160,7 +165,7 @@ export async function notify(
     const to = await resolveRecipient(accountId, payload);
     if (!to) {
       console.error(`[notify] no recipient resolved for account ${accountId}, type ${type}`);
-      return event.id;
+      return { id: event.id, sent: false };
     }
 
     const { subject, react } = render(type, payload);
@@ -168,7 +173,7 @@ export async function notify(
 
     if (error) {
       console.error(`[notify] Resend send failed for type ${type}:`, error);
-      return event.id;
+      return { id: event.id, sent: false };
     }
 
     await db
@@ -177,7 +182,8 @@ export async function notify(
       .where(eq(notificationEvents.id, event.id));
   } catch (err) {
     console.error(`[notify] unexpected error sending type ${type}:`, err);
+    return { id: event.id, sent: false };
   }
 
-  return event.id;
+  return { id: event.id, sent: true };
 }

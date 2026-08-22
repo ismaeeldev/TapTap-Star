@@ -90,7 +90,12 @@ export async function POST(req: Request) {
   });
 
   const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/verify-email?token=${token}`;
-  await notify(account.id, "verification", { verifyUrl, recipientEmail: email });
+  // Signup already confidently reveals "email already exists" above (unlike forgot-password /
+  // resend-verification, which deliberately stay ambiguous) — so there's no enumeration risk in
+  // also telling the client whether the verification email actually sent. The account itself is
+  // still created either way; a failed send must not block account creation, only the copy shown
+  // for it (see the frontend, which now branches on `emailSent` instead of always claiming sent).
+  const { sent } = await notify(account.id, "verification", { verifyUrl, recipientEmail: email });
 
-  return NextResponse.json({ ok: true, email }, { status: 201 });
+  return NextResponse.json({ ok: true, email, emailSent: sent }, { status: 201 });
 }

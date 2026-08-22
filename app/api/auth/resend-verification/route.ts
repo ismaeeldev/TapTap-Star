@@ -24,7 +24,13 @@ export async function POST(req: Request) {
 
   const user = await db.query.users.findFirst({ where: eq(users.email, email) });
 
-  // Same "never reveal whether it exists" posture as forgot-password.
+  // Same "never reveal whether it exists" posture as forgot-password. Deliberately NOT returning
+  // notify()'s `sent` result here (unlike signup, which does) — surfacing real send status on
+  // this endpoint would let an attacker distinguish "no such account" from "account exists but
+  // Resend failed," reopening the exact enumeration hole this ambiguous response exists to close.
+  // The frontend uses hedged copy ("if that email is registered...") instead of a confident
+  // "sent" message, which stays honest without leaking anything. Send failures are still logged
+  // server-side inside notify() either way.
   if (user && !user.emailVerifiedAt) {
     const token = randomBytes(32).toString("hex");
     await db.insert(emailVerificationTokens).values({

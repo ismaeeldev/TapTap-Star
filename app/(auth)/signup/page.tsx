@@ -37,8 +37,21 @@ export default function SignupPage() {
         return;
       }
 
-      toast.success("Account created — check your inbox to verify your email.");
-      router.push(`/verify-email?email=${encodeURIComponent(values.email)}`);
+      const data = await res.json().catch(() => ({ emailSent: false }));
+
+      // Only claim the email was sent when the send actually succeeded — the account itself is
+      // still created either way, but the copy (and the next page's messaging) must reflect
+      // reality, not just assume the send worked because the API call didn't throw.
+      if (data.emailSent) {
+        toast.success("Account created — check your inbox to verify your email.");
+      } else {
+        toast.warning(
+          "Account created, but we couldn't send the verification email just now. You can retry from the next page."
+        );
+      }
+      router.push(
+        `/verify-email?email=${encodeURIComponent(values.email)}&sent=${data.emailSent ? "1" : "0"}`
+      );
     } catch {
       toast.error("Network error — please check your connection and try again.");
     }
