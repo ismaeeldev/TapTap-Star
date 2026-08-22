@@ -45,13 +45,18 @@ export function DashboardNav({ showClients = false }: { showClients?: boolean })
             key={href}
             href={href}
             className={cn(
-              "flex shrink-0 items-center gap-2.5 rounded-md px-3 py-2.5 text-body-sm font-medium whitespace-nowrap transition-colors",
+              "relative flex shrink-0 items-center gap-2.5 rounded-md py-2.5 pr-3 pl-3 text-body-sm font-medium whitespace-nowrap transition-all duration-150 lg:pl-4",
               active
                 ? "bg-brand-subtle text-brand"
-                : "text-text-secondary hover:bg-bg-muted hover:text-text-primary"
+                : "text-text-secondary hover:translate-x-0.5 hover:bg-bg-muted hover:text-text-primary"
             )}
           >
-            <Icon className="size-4" />
+            {/* Active-item accent bar (theme guideline section 4) — vertical rail only, so it
+                only renders in the desktop lg:flex-col layout, not the mobile horizontal scroller. */}
+            {active && (
+              <span className="absolute inset-y-1.5 left-0 hidden w-[3px] rounded-full bg-brand lg:block" />
+            )}
+            <Icon className={cn("size-4 transition-transform", active && "scale-110")} />
             {label}
           </Link>
         );

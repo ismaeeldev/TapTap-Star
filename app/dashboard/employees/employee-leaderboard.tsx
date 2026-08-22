@@ -233,7 +233,7 @@ export function EmployeeLeaderboard({
                   {group.employees.map((e) => (
                     <div
                       key={e.id}
-                      className="flex items-center justify-between gap-3 rounded-md border border-border-default bg-bg-card p-3"
+                      className="flex items-center justify-between gap-3 rounded-md border border-border-default bg-bg-card p-3 transition-colors hover:bg-bg-muted/50"
                     >
                       <div className="flex items-center gap-3">
                         <span className="flex size-7 items-center justify-center rounded-full bg-brand-subtle text-caption font-semibold text-brand">
@@ -261,7 +261,7 @@ export function EmployeeLeaderboard({
           {flatEmployees.map((e, i) => (
             <div
               key={e.id}
-              className="flex items-center justify-between gap-3 rounded-md border border-border-default bg-bg-card p-3"
+              className="flex items-center justify-between gap-3 rounded-md border border-border-default bg-bg-card p-3 transition-colors hover:bg-bg-muted/50"
             >
               <div className="flex items-center gap-3">
                 <span className="flex size-7 items-center justify-center rounded-full bg-brand-subtle text-caption font-semibold text-brand">

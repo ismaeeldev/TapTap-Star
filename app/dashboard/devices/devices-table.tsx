@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { Card } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -28,15 +29,15 @@ export function DevicesTable({ devices }: { devices: DeviceRow[] }) {
 
   return (
     <>
-      <div className="hidden overflow-hidden rounded-lg border border-border-default md:block">
+      <Card className="hidden overflow-hidden py-0 md:block">
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow className="hover:bg-transparent">
               <TableHead>Code</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Location</TableHead>
               <TableHead>Employee</TableHead>
-              <TableHead>Scans</TableHead>
+              <TableHead className="text-right">Scans</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -52,12 +53,14 @@ export function DevicesTable({ devices }: { devices: DeviceRow[] }) {
                 </TableCell>
                 <TableCell>{d.location?.name ?? "—"}</TableCell>
                 <TableCell>{d.employee?.name ?? "—"}</TableCell>
-                <TableCell>{d.scanCount.toLocaleString()}</TableCell>
+                <TableCell className="text-right font-semibold">
+                  {d.scanCount.toLocaleString()}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
-      </div>
+      </Card>
 
       <div className="space-y-3 md:hidden">
         {devices.map((d) => (
@@ -65,7 +68,7 @@ export function DevicesTable({ devices }: { devices: DeviceRow[] }) {
             key={d.id}
             type="button"
             onClick={() => router.push(`/dashboard/devices/${d.id}`)}
-            className="w-full rounded-lg border border-border-default bg-bg-card p-4 text-left"
+            className="w-full rounded-lg border border-border-default bg-bg-card p-4 text-left shadow-xs transition-shadow active:shadow-none"
           >
             <div className="mb-2 flex items-center justify-between">
               <span className="font-mono text-body-sm text-text-primary">{d.code}</span>

@@ -33,10 +33,17 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // a real, confusing inconsistency this global shell must not reintroduce.
   const showClients = session ? await isApprovedAgencySession(session) : false;
 
+  const initials = (session?.user.name ?? "")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+
   return (
     <div className="flex min-h-svh flex-col bg-bg-page lg:flex-row">
-      <aside className="border-b border-border-default bg-bg-surface px-4 py-3 lg:w-64 lg:shrink-0 lg:border-b-0 lg:border-r lg:px-4 lg:py-6">
-        <div className="mb-6 hidden lg:block">
+      <aside className="border-b border-border-default bg-bg-surface px-4 py-3 shadow-xs lg:w-64 lg:shrink-0 lg:border-r lg:border-b-0 lg:px-4 lg:py-6">
+        <div className="mb-6 hidden border-b border-border-default pb-6 lg:block">
           <Link href="/dashboard" className="no-underline">
             <Logo />
           </Link>
@@ -49,8 +56,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <div className="lg:hidden">
             <Logo iconOnly />
           </div>
-          <div className="hidden text-body-sm text-text-muted lg:block">
-            {session?.user.name}
+          <div className="hidden items-center gap-2.5 lg:flex">
+            <span className="flex size-8 items-center justify-center rounded-full bg-brand-subtle text-caption font-semibold text-brand">
+              {initials || "?"}
+            </span>
+            <span className="text-body-sm font-medium text-text-primary">
+              {session?.user.name}
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />

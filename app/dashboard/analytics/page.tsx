@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "@/lib/toast";
 import { fadeUp, staggerContainer } from "@/lib/motion";
+import { Card } from "@/components/ui/card";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -110,10 +111,14 @@ export default function AnalyticsPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <h1 className="text-h3 font-semibold text-text-primary">Analytics</h1>
-        <div className="flex flex-wrap items-end gap-3">
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-h2 font-display font-semibold text-text-primary">Analytics</h1>
+        <p className="text-body-sm text-text-muted">Scan activity across your locations and devices.</p>
+      </div>
+
+      <Card className="px-5">
+        <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
           <div className="space-y-1">
             <Label htmlFor="from" className="text-caption">
               From
@@ -173,28 +178,30 @@ export default function AnalyticsPage() {
               </SelectContent>
             </Select>
           </div>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            disabled={exporting !== null}
-            onClick={() => handleExport("csv")}
-          >
-            {exporting === "csv" ? <Loader2 className="animate-spin" /> : <Download className="size-3.5" />}
-            CSV
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            disabled={exporting !== null}
-            onClick={() => handleExport("pdf")}
-          >
-            {exporting === "pdf" ? <Loader2 className="animate-spin" /> : <Download className="size-3.5" />}
-            PDF
-          </Button>
+          <div className="ml-auto flex items-end gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={exporting !== null}
+              onClick={() => handleExport("csv")}
+            >
+              {exporting === "csv" ? <Loader2 className="animate-spin" /> : <Download className="size-3.5" />}
+              CSV
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={exporting !== null}
+              onClick={() => handleExport("pdf")}
+            >
+              {exporting === "pdf" ? <Loader2 className="animate-spin" /> : <Download className="size-3.5" />}
+              PDF
+            </Button>
+          </div>
         </div>
-      </div>
+      </Card>
 
       {error || (data && "message" in data) ? (
         <div className="flex items-center justify-between gap-3 rounded-lg border border-danger/30 bg-danger/10 px-4 py-3">
@@ -238,85 +245,78 @@ export default function AnalyticsPage() {
             className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
           >
             <motion.div variants={fadeUp}>
-              <StatTile
-                label="Total scans"
-                value={summary.totalScans}
-                trend={
-                  summary.totalScansTrendPercent === null
-                    ? undefined
-                    : {
-                        direction: summary.totalScansTrendPercent >= 0 ? "up" : "down",
-                        percent: Math.abs(summary.totalScansTrendPercent),
-                      }
-                }
-                glow={summary.totalScansTrendPercent !== null && summary.totalScansTrendPercent > 0}
-                className="rounded-lg border border-border-default bg-bg-card p-6"
-              />
+              <Card className="px-6 transition-shadow duration-150 hover:shadow-md">
+                <StatTile
+                  label="Total scans"
+                  value={summary.totalScans}
+                  trend={
+                    summary.totalScansTrendPercent === null
+                      ? undefined
+                      : {
+                          direction: summary.totalScansTrendPercent >= 0 ? "up" : "down",
+                          percent: Math.abs(summary.totalScansTrendPercent),
+                        }
+                  }
+                  glow={summary.totalScansTrendPercent !== null && summary.totalScansTrendPercent > 0}
+                />
+              </Card>
             </motion.div>
             <motion.div variants={fadeUp}>
-              <StatTile
-                label="Active devices"
-                value={summary.activeDevices}
-                className="rounded-lg border border-border-default bg-bg-card p-6"
-              />
+              <Card className="px-6 transition-shadow duration-150 hover:shadow-md">
+                <StatTile label="Active devices" value={summary.activeDevices} />
+              </Card>
             </motion.div>
             {/* Custom tile (not StatTile) — this KPI's headline IS the % change itself, not a
                 count with a trend badge bolted on, so re-using StatTile here would either
                 duplicate the "Total scans" number (the original bug) or need a fake integer
                 animation on a percentage. See 04_PROJECT_STATE.md's Step 6 UI-polish entry. */}
-            <motion.div
-              variants={fadeUp}
-              className="space-y-2 rounded-lg border border-border-default bg-bg-card p-6"
-            >
-              <p className="text-caption font-semibold uppercase tracking-wide text-text-muted">
-                Scan trend
-              </p>
-              {summary.conversionTrendPercent === null ? (
-                <p className="text-h4 font-semibold text-text-muted">—</p>
-              ) : (
-                <p
-                  className={`flex items-baseline gap-1 text-display-md font-display font-bold tabular-nums ${
-                    summary.conversionTrendPercent >= 0 ? "text-success" : "text-danger"
-                  }`}
-                >
-                  {summary.conversionTrendPercent >= 0 ? (
-                    <ArrowUp className="size-5" />
-                  ) : (
-                    <ArrowDown className="size-5" />
-                  )}
-                  {Math.abs(summary.conversionTrendPercent)}%
+            <motion.div variants={fadeUp}>
+              <Card className="space-y-2 px-6 transition-shadow duration-150 hover:shadow-md">
+                <p className="text-caption font-semibold uppercase tracking-wide text-text-muted">
+                  Scan trend
                 </p>
-              )}
-              <p className="text-body-sm text-text-muted">vs. previous period</p>
+                {summary.conversionTrendPercent === null ? (
+                  <p className="text-h4 font-semibold text-text-muted">—</p>
+                ) : (
+                  <p
+                    className={`flex items-baseline gap-1 text-display-md font-display font-bold tabular-nums ${
+                      summary.conversionTrendPercent >= 0 ? "text-success" : "text-danger"
+                    }`}
+                  >
+                    {summary.conversionTrendPercent >= 0 ? (
+                      <ArrowUp className="size-5" />
+                    ) : (
+                      <ArrowDown className="size-5" />
+                    )}
+                    {Math.abs(summary.conversionTrendPercent)}%
+                  </p>
+                )}
+                <p className="text-body-sm text-text-muted">vs. previous period</p>
+              </Card>
             </motion.div>
-            <motion.div
-              variants={fadeUp}
-              className="space-y-2 rounded-lg border border-border-default bg-bg-card p-6"
-            >
-              <p className="text-caption font-semibold uppercase tracking-wide text-text-muted">
-                Most-used review link
-              </p>
-              {summary.mostUsedLocation ? (
-                <>
-                  <p className="text-h4 font-semibold text-text-primary">
-                    {summary.mostUsedLocation.name}
-                  </p>
-                  <p className="text-body-sm text-text-muted">
-                    {summary.mostUsedLocation.scanCount.toLocaleString()} scans
-                  </p>
-                </>
-              ) : (
-                <p className="text-body-sm text-text-muted">No scans yet</p>
-              )}
+            <motion.div variants={fadeUp}>
+              <Card className="space-y-2 px-6 transition-shadow duration-150 hover:shadow-md">
+                <p className="text-caption font-semibold uppercase tracking-wide text-text-muted">
+                  Most-used review link
+                </p>
+                {summary.mostUsedLocation ? (
+                  <>
+                    <p className="text-h4 font-semibold text-text-primary">
+                      {summary.mostUsedLocation.name}
+                    </p>
+                    <p className="text-body-sm text-text-muted">
+                      {summary.mostUsedLocation.scanCount.toLocaleString()} scans
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-body-sm text-text-muted">No scans yet</p>
+                )}
+              </Card>
             </motion.div>
           </motion.div>
 
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={fadeUp}
-            className="rounded-lg border border-border-default bg-bg-card p-6"
-          >
+          <motion.div initial="hidden" animate="visible" variants={fadeUp}>
+          <Card className="px-6">
             <p className="mb-4 text-body-sm font-medium text-text-primary">Scans over time</p>
             <ResponsiveContainer width="100%" height={280}>
               <LineChart data={summary.timeSeries} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
@@ -373,6 +373,7 @@ export default function AnalyticsPage() {
                 />
               </LineChart>
             </ResponsiveContainer>
+          </Card>
           </motion.div>
         </>
       )}

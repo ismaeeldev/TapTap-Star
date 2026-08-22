@@ -15,10 +15,14 @@ look like `http://localhost:xxxx`).
 **2. You'll use these two ready-made test accounts** (already set up in the system, no need to
 create them):
 
-| Role | Email | Password |
-|---|---|---|
-| Business owner | `owner@downtowncafe.local` | `DevPassword123!` |
-| Taptapstar admin (staff) | `admin@taptapstar.local` | `DevPassword123!` |
+| Account | Email | Password | What it logs into |
+|---|---|---|---|
+| Business owner | `owner@downtowncafe.local` | `DevPassword123!` | The one customer dashboard every business uses |
+| Taptapstar internal staff | `admin@taptapstar.local` | `DevPassword123!` | The separate internal admin panel (your own team's tool — not a customer feature) |
+
+Note: there is only **one** customer-facing dashboard. A business's own employees (the people
+being ranked on the leaderboard) never log into anything — they only get a public, no-login
+personal link (see Module 5.5 below).
 
 **3. A note on emails**: this test environment can only send emails to one specific test inbox,
 not your real email address. If a step says "check your email," ask your developer to confirm
@@ -110,6 +114,40 @@ it for the first time.
       dashboard's analytics/live feed).
 - [ ] **4.8** Try visiting a code that doesn't exist at all, e.g. `yoursite.com/r/doesnotexist` —
       confirm you see a friendly "not found" page, never a raw error screen.
+
+---
+
+## Quick guide — testing the dashboard's new look
+
+The dashboard was just given a visual refresh (nicer sidebar, cards, hover effects). Here's the
+fast way to sanity-check it took effect everywhere, in under 5 minutes, before doing the full
+Module 5 walkthrough below:
+
+- [ ] **Log in** as `owner@downtowncafe.local` — you land on `/dashboard`.
+- [ ] **Sidebar**: click through every item (Overview, Devices, Locations, Employees, Analytics,
+      Billing, Settings). The item you're currently on should show a small colored bar on its
+      left edge and a tinted background — you should always be able to tell which page you're on
+      at a glance.
+- [ ] **Top-right corner**: confirm you see a small circle with your initials next to your name,
+      and a sun/moon icon next to it.
+- [ ] **Dark mode**: click the sun/moon icon. The whole dashboard — sidebar, cards, tables, text —
+      should flip to a dark background with light text, instantly, with nothing left over in the
+      wrong color (no white boxes on a dark page, no unreadable dark-on-dark text). Click it again
+      to flip back. Try this on 2-3 different pages (Overview, Analytics, Devices), not just one.
+- [ ] **Analytics page**: the date/location/device filters should sit inside one clean bordered
+      panel at the top (not loose controls scattered across the page), and the 4 number cards
+      below should each sit in their own card that gently lifts (a soft shadow) when you hover
+      your mouse over it.
+- [ ] **Devices / Locations pages**: hover over a row — it should visibly highlight before you
+      click it, so it's clear it's clickable.
+- [ ] **Resize your browser narrow** (or check on your phone) — the sidebar should collapse into a
+      horizontal scrollable bar at the top, nothing should overlap or get cut off.
+- [ ] Nothing above should require a page refresh to look right, and no page should ever show a
+      blank white screen or a raw error while loading — see Module 11 for the general loading/
+      toast/error checklist that still applies everywhere in the dashboard.
+
+If all of the above look right, the redesign is working as intended — the rest of Module 5 below
+tests the dashboard's actual features (not just its look).
 
 ---
 

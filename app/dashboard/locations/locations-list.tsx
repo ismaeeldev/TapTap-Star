@@ -244,7 +244,7 @@ export function LocationsList({ locations }: { locations: LocationRow[] }) {
           <div
             key={loc.id}
             onClick={() => router.push(`/dashboard/locations/${loc.id}`)}
-            className="flex cursor-pointer flex-col gap-3 rounded-lg border border-border-default bg-bg-card p-4 sm:flex-row sm:items-center sm:justify-between"
+            className="flex cursor-pointer flex-col gap-3 rounded-lg border border-border-default bg-bg-card p-4 shadow-xs transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md sm:flex-row sm:items-center sm:justify-between"
           >
             <div>
               <p className="font-semibold text-text-primary">{loc.name}</p>
