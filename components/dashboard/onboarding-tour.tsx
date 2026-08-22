@@ -179,6 +179,20 @@ export function OnboardingTour({
   const tooltipStyle = React.useMemo<React.CSSProperties>(() => {
     if (!rect) return {};
     const width = Math.min(320, window.innerWidth - TOOLTIP_MARGIN * 2);
+    const spaceRight = window.innerWidth - rect.right;
+
+    // Prefer placing to the right of the target when there's room — this is what the sidebar
+    // needs (its nav items stack vertically, so a below-placed tooltip would cover the very
+    // items still to come in the tour). Fall back to below/above only when there isn't enough
+    // horizontal room (narrow viewports, or a target near the right edge like the theme toggle).
+    if (spaceRight > width + TOOLTIP_MARGIN * 2) {
+      const top = Math.min(
+        Math.max(rect.top, TOOLTIP_MARGIN),
+        window.innerHeight - TOOLTIP_EST_HEIGHT - TOOLTIP_MARGIN
+      );
+      return { position: "fixed", left: rect.right + TOOLTIP_MARGIN, top, width };
+    }
+
     const spaceBelow = window.innerHeight - rect.bottom;
     const placeAbove = spaceBelow < TOOLTIP_EST_HEIGHT + TOOLTIP_MARGIN && rect.top > TOOLTIP_EST_HEIGHT;
     const left = Math.min(Math.max(rect.left, TOOLTIP_MARGIN), window.innerWidth - width - TOOLTIP_MARGIN);
@@ -251,8 +265,8 @@ export function OnboardingTour({
                 transition={{ duration: reduceMotion ? 0 : 0.18, ease: "easeOut" }}
               >
                 <Card
-                  variant="glass"
-                  className={cn("p-5", centered && "w-full max-w-sm")}
+                  variant="standard"
+                  className={cn("p-5 shadow-lg", centered && "w-full max-w-sm")}
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="mb-1 flex items-center justify-between gap-2">
