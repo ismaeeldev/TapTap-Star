@@ -80,36 +80,41 @@ This part walks you through testing **every feature** of the app, one at a time,
 language. You don't need any technical background — just follow each section top to bottom,
 check the boxes as you go, and note anything that doesn't match what's described.
 
----
+This checklist is split into two clearly separate sections so you can test each role on its own:
 
-## Before you start
+- **Part 2A — Testing as a Business Owner**: everything a normal customer sees and does. Use the
+  `owner@downtowncafe.local` login for all of this.
+- **Part 2B — Testing as an Admin**: the separate internal staff tool, hidden from every normal
+  customer. Use the `admin@taptapstar.local` login for all of this.
 
-**1. Get the app running.**
-Ask your developer for the live testing link (or, if running it yourself locally, the link will
-look like `http://localhost:xxxx`).
+A couple of steps genuinely need both roles (e.g. a business owner requests agency access, and an
+admin has to approve it) — those are clearly marked with a pointer to the other section, so you
+always know exactly which login to use for each step.
 
-**2. You'll use these two ready-made test accounts** (already set up in the system, no need to
-create them):
-
-| Account | Email | Password | What it logs into |
-|---|---|---|---|
-| Business owner | `owner@downtowncafe.local` | `DevPassword123!` | The one customer dashboard every business uses |
-| Taptapstar internal staff | `admin@taptapstar.local` | `DevPassword123!` | The separate internal admin panel (your own team's tool — not a customer feature) |
-
-Note: there is only **one** customer-facing dashboard. A business's own employees (the people
-being ranked on the leaderboard) never log into anything — they only get a public, no-login
-personal link (see Module 5.5 below).
-
-**3. A note on emails**: whether emails actually arrive in your inbox depends on whether a real
+**A note on emails**: whether emails actually arrive in your inbox depends on whether a real
 email account has been connected yet. If a step says "check your email" and nothing shows up
 after a few minutes (check spam too), ask your developer to confirm an email account is
 connected — the app will always tell you clearly on-screen whether it thinks the email went out
 or not (it never just pretends), so if you see a message like "we couldn't send this email right
 now," that's the app being honest, not a bug.
 
-**4. How to report a problem**: for anything that doesn't work as described, note down:
-(a) which numbered step you were on, (b) what you expected to happen, (c) what actually
-happened. Screenshots help a lot.
+**How to report a problem**: for anything that doesn't work as described, note down: (a) which
+numbered step you were on, (b) what you expected to happen, (c) what actually happened.
+Screenshots help a lot.
+
+---
+
+## Part 2A — Testing as a Business Owner
+
+Log in at the live site with:
+
+| Email | Password |
+|---|---|
+| `owner@downtowncafe.local` | `DevPassword123!` |
+
+This is the one dashboard every real customer uses. Their own employees (the people ranked on
+the leaderboard) never log into anything themselves — they only get a public, no-login personal
+link (see Module 5.5 below).
 
 ---
 
@@ -131,8 +136,8 @@ happened. Screenshots help a lot.
       service"**. Both should open real pages (currently placeholder text, clearly labeled as
       such — that's expected until final legal copy is provided).
 - [ ] **1.6** Fill out the **contact form** at the bottom of the homepage with a fake name/email
-      and a short message, then submit. You should see a confirmation message on screen. (Ask
-      your developer to confirm it landed in `/admin/support`'s inbox — see Module 8.)
+      and a short message, then submit. You should see a confirmation message on screen. (An
+      admin can confirm it landed in the support inbox — see Part 2B, Module 9.)
 - [ ] **1.7** Resize your browser window narrow (or open the site on your phone) — check that
       nothing overlaps, no button is cut off or hidden, and the menu collapses into a hamburger
       icon.
@@ -292,10 +297,9 @@ Log in as `owner@downtowncafe.local`.
       card).
 - [ ] **7.3** After adding a card in Stripe's test page, return to the site — confirm the
       billing page reflects the update (not stuck showing old information).
-- [ ] **7.4** As the **admin** account (`admin@taptapstar.local`), go to
-      **`/admin/billing-settings`** and change the price — confirm it asks you to confirm before
-      saving (since this affects every customer), and afterward the new price shows correctly
-      on the public pricing page (Module 1.3) and the business owner's billing page.
+- [ ] **7.4** Changing the price itself is an **admin** action — see Part 2B, Module 9, step 9.7.
+      Once an admin does that, come back here and confirm the new price shows correctly on the
+      public pricing page (Module 1.3) and on this billing page.
 
 ---
 
@@ -303,21 +307,47 @@ Log in as `owner@downtowncafe.local`.
 
 - [ ] **8.1** As `owner@downtowncafe.local`, go to **Settings** and click **"Request Agency
       Access"** — confirm the page now shows a clear "your request is pending review" message.
-- [ ] **8.2** Log in as the **admin** account, go to **`/admin/agency-requests`** — confirm you
-      see the pending request, with **Approve** and **Reject** buttons.
-- [ ] **8.3** Click **Approve** — confirm a success message appears.
-- [ ] **8.4** Log back in as `owner@downtowncafe.local` (or just refresh if already logged in) —
+- [ ] **8.2** Approving the request is an **admin** action — see Part 2B, Module 9, step 9.8. Once
+      an admin approves it, come back here.
+- [ ] **8.3** Log back in as `owner@downtowncafe.local` (or just refresh if already logged in) —
       confirm a new **"Clients"** section now appears in the dashboard navigation, and you can
       create a new client business from there.
-- [ ] **8.5** Open one of your created clients — confirm you see a "viewing: [Client Name]"
+- [ ] **8.4** Open one of your created clients — confirm you see a "viewing: [Client Name]"
       banner and can see that client's own devices/employees/analytics, with a clear way to
       exit back to your main agency view.
 
 ---
 
-## Module 9 — Internal Admin Panel (staff-only tools)
+## Module 10 — Notifications (Emails) — the business-owner side
 
-Log in as `admin@taptapstar.local`.
+Check the inbox of whichever email account is connected for this environment (ask your developer
+which one, if you're not sure) to confirm an email arrived for each of these actions you've
+already performed above. If nothing arrives for any of them, ask your developer to check that an
+email account is properly connected — see the note at the top of Part 2.
+- [ ] **10.1** Signing up (Module 2.2) → verification email
+- [ ] **10.2** Verifying your email (Module 2.5) → welcome email
+- [ ] **10.3** Activating a device (Module 4.5) → activation confirmation to the owner
+- [ ] **10.4** Submitting the contact form (Module 1.6) → internal notification to the admin inbox
+
+(One more notification — the agency-approval confirmation email — is checked in Part 2B, since it
+only fires once an admin approves the request.)
+
+---
+
+## Part 2B — Testing as an Admin
+
+Log in at the live site with:
+
+| Email | Password |
+|---|---|
+| `admin@taptapstar.local` | `DevPassword123!` |
+
+This is the separate internal staff tool — completely hidden from every normal business account,
+used only by your own team to manage the whole platform.
+
+---
+
+## Module 9 — Internal Admin Panel (staff-only tools)
 
 - [ ] **9.1** Confirm a normal business account (`owner@downtowncafe.local`) **cannot** reach any
       `/admin/...` page — trying should redirect them away, not show admin content.
@@ -329,29 +359,28 @@ Log in as `admin@taptapstar.local`.
       filter correctly, and a "no matches" message with a way to clear the search appears if
       nothing matches.
 - [ ] **9.5** **`/admin/devices`** — search/filter the full device list by status and code.
-- [ ] **9.6** **`/admin/support`** — confirm you see the contact-form submission from Module
-      1.6 in an inbox list, and can mark it as read/resolved.
+- [ ] **9.6** **`/admin/support`** — confirm you see the contact-form submission from Part 2A's
+      step 1.6 in an inbox list, and can mark it as read/resolved.
+- [ ] **9.7** **`/admin/billing-settings`** — change the price. Confirm it asks you to confirm
+      before saving (since this affects every customer). This is the other half of Part 2A's
+      step 7.4 — go back and check it there once you're done here.
+- [ ] **9.8** **`/admin/agency-requests`** — confirm you see the pending request from Part 2A's
+      step 8.1, with **Approve** and **Reject** buttons. Click **Approve** — confirm a success
+      message appears. This is the other half of Part 2A's step 8.2 — go back and continue from
+      8.3 once you're done here.
 
 ---
 
-## Module 10 — Notifications (Emails)
+## Module 10B — Notifications (Emails) — the admin side
 
-Check the inbox of whichever email account is connected for this environment (ask your developer
-which one, if you're not sure) to confirm an email arrived for each of these actions you've
-already performed above. If nothing arrives for any of them, ask your developer to check that an
-email account is properly connected — see the note at the top of this guide.
-- [ ] **10.1** Signing up (Module 2.2) → verification email
-- [ ] **10.2** Verifying your email (Module 2.5) → welcome email
-- [ ] **10.3** Activating a device (Module 4.5) → activation confirmation to the owner
-- [ ] **10.4** Submitting the contact form (Module 1.6) → internal notification to the admin inbox
-- [ ] **10.5** Approving/rejecting an agency request (Module 8.3) → confirmation email to the
-      requester
+- [ ] **10.5** Approving the agency request (step 9.8 above) → confirmation email to the business
+      owner who requested it.
 
 ---
 
-## Module 11 — General Feel & Polish (do this throughout, not as a separate pass)
+## Module 11 — General Feel & Polish (do this throughout both parts, not as a separate pass)
 
-While going through every module above, also keep an eye on:
+While going through every module above — in both Part 2A and Part 2B — also keep an eye on:
 - [ ] Every button you click gives some kind of immediate response (a loading state, a message,
       or a page change) — nothing should feel "dead" or leave you wondering if it worked.
 - [ ] Pages that are loading show a skeleton/placeholder layout, never a blank white screen.
@@ -366,5 +395,5 @@ While going through every module above, also keep an eye on:
 
 If every box above is checked with no surprises, the application is working as designed and
 ready for the next stage (real payment setup and going live). Send your developer the list of
-anything that didn't match what this guide describes, with the module/step number — that's all
-they'll need to find and fix it.
+anything that didn't match what this guide describes, with the module/step number and whether it
+was in Part 2A or 2B — that's all they'll need to find and fix it.
