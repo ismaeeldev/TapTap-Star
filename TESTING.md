@@ -1,5 +1,8 @@
 # Taptapstar — Complete Testing Guide
 
+**Live site: [https://taptap-star.vercel.app/](https://taptap-star.vercel.app/)** — this is the
+one link you need for everything in this guide. Every "log in" step below happens on this site.
+
 This guide has two parts. **Part 1** is a plain how-to guide for actually using Taptapstar day to
 day — keep this handy after testing is done, it's the same guide you'd hand a new team member.
 **Part 2** is a full testing checklist for confirming everything works before launch. You don't
@@ -13,8 +16,9 @@ A quick reference for the things you'll actually do day to day, once your accoun
 
 ### Logging in
 
-Go to the site and click **Log in** (top right), enter your email and password. Forgot your
-password? Click **"Forgot password?"** on that same page and follow the emailed link.
+Go to **[https://taptap-star.vercel.app/](https://taptap-star.vercel.app/)** and click **Log in**
+(top right), enter your email and password. Forgot your password? Click **"Forgot password?"** on
+that same page and follow the emailed link.
 
 ### Activating a new device
 
@@ -110,7 +114,7 @@ Screenshots help a lot.
 
 ## Part 2A — Testing as a Business Owner
 
-Log in at the live site with:
+Log in at [https://taptap-star.vercel.app/](https://taptap-star.vercel.app/) with:
 
 | Email | Password |
 |---|---|
@@ -354,7 +358,7 @@ only fires once an admin approves the request.)
 
 ## Part 2B — Testing as an Admin
 
-Log in at the live site with:
+Log in at [https://taptap-star.vercel.app/](https://taptap-star.vercel.app/) with:
 
 | Email | Password |
 |---|---|
