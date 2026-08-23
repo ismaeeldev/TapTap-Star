@@ -1,6 +1,82 @@
 # Taptapstar — Complete Testing Guide
 
-This guide walks you through testing **every feature** of the app, one at a time, in plain
+This guide has two parts. **Part 1** is a plain how-to guide for actually using Taptapstar day to
+day — keep this handy after testing is done, it's the same guide you'd hand a new team member.
+**Part 2** is a full testing checklist for confirming everything works before launch. You don't
+need any technical background for either — just follow along step by step.
+
+---
+
+## Part 1 — How to Use Taptapstar
+
+A quick reference for the things you'll actually do day to day, once your account is set up.
+
+### Logging in
+
+Go to the site and click **Log in** (top right), enter your email and password. Forgot your
+password? Click **"Forgot password?"** on that same page and follow the emailed link.
+
+### Activating a new device
+
+This is the core thing Taptapstar does — turning a physical NFC card, plaque, or stand into a
+working review-collector.
+
+1. Scan the device's NFC tap or QR code with your phone (or open its link directly).
+2. Since it's new, you'll land on the **activation wizard** instead of the review page.
+3. **Step 1**: pick which of your locations this device is for, or add a new one on the spot
+   (name, address, and the Google review link customers should land on).
+4. **Step 2** (optional): assign it to a specific employee, so their scans count toward their own
+   leaderboard total — or skip this if it's a shared/front-counter device.
+5. **Step 3**: review the summary and click **Activate Device**. That's it — from now on, tapping
+   or scanning that device sends customers straight to your Google review page.
+
+### Managing locations
+
+**Dashboard → Locations.** Click **Add location** to create one. Click any existing location to
+edit its name/address/review link, or delete it (you'll be asked to confirm first — and you'll
+need to deactivate or reassign any device still active there before you can delete it).
+
+### Managing employees
+
+**Dashboard → Employees.** This is a live leaderboard, ranked by scan count.
+
+- **Copy a personal link**: click "Copy link" next to anyone's name and send it to them — it's a
+  public link, no login needed, showing just their own name, rank, and scan count. This is the
+  link employees use to check their own standing.
+- **Rename or remove someone**: click the pencil icon to rename, or the trash icon to remove them
+  (their past scans and any devices linked to them are kept — removing someone just retires their
+  leaderboard entry and disables their personal link).
+- **Set a team target**: pick a location, choose weekly or monthly, and enter a scan goal — every
+  employee at that location will see a progress bar toward it on their personal link.
+
+### Checking analytics
+
+**Dashboard → Analytics.** Filter by date range, location, or device. Click **Export CSV** or
+**Export PDF** to download a copy of the numbers for a report or a meeting.
+
+### Managing billing
+
+**Dashboard → Billing.** Shows your current plan and subscription status. Click **Manage payment
+method & invoices** to add/update a card or download past invoices — this opens Stripe's own
+secure page, not a form on this site.
+
+### Requesting agency access (managing multiple businesses)
+
+If you manage more than one business, go to **Dashboard → Settings** and click **Request Agency
+Access**. Once a Taptapstar admin approves it (you'll get an email), a **Clients** section appears
+in your sidebar where you can add and switch between every business you manage from one login.
+
+### Dark mode & getting help
+
+Click the sun/moon icon (top right) anytime to switch themes — it's remembered for next time.
+Click the **"?"** icon next to it to replay the short getting-started tour whenever you want a
+refresher on where things are.
+
+---
+
+## Part 2 — Testing Checklist
+
+This part walks you through testing **every feature** of the app, one at a time, in plain
 language. You don't need any technical background — just follow each section top to bottom,
 check the boxes as you go, and note anything that doesn't match what's described.
 
