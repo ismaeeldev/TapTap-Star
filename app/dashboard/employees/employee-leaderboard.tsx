@@ -1,9 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Copy, Target } from "lucide-react";
+import { Copy, Pencil, Target, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -42,6 +51,116 @@ function CopyLinkButton({ accessToken }: { accessToken: string }) {
     >
       <Copy className="size-3.5" /> Copy link
     </Button>
+  );
+}
+
+// Edit (name) + delete for one employee — mirrors LocationsList's EditDeleteControls pattern
+// (app/dashboard/locations/locations-list.tsx). No "still in use" guard needed before delete,
+// unlike deleting a location: devices.employeeId/scans.employeeId are both `onDelete: set null`
+// (lib/db/schema.ts), so removing an employee can never leave anything in a broken state.
+function EmployeeControls({
+  employee,
+  onUpdated,
+  onDeleted,
+}: {
+  employee: { id: string; name: string };
+  onUpdated: (id: string, name: string) => void;
+  onDeleted: (id: string) => void;
+}) {
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [name, setName] = useState(employee.name);
+
+  async function handleEdit() {
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/employees/${employee.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.message ?? "Failed to update employee");
+        return;
+      }
+      toast.success("Employee updated");
+      onUpdated(employee.id, name);
+      setEditOpen(false);
+    } catch {
+      toast.error("Failed to update employee — check your connection and try again");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleDelete() {
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/employees/${employee.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.message ?? "Failed to delete employee");
+        return;
+      }
+      toast.success("Employee deleted");
+      onDeleted(employee.id);
+      setDeleteOpen(false);
+    } catch {
+      toast.error("Failed to delete employee — check your connection and try again");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="flex gap-1">
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogTrigger asChild>
+          <Button variant="ghost" size="icon-sm" aria-label="Edit employee">
+            <Pencil className="size-3.5" />
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit employee</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label htmlFor={`emp-name-${employee.id}`}>Name</Label>
+            <Input id={`emp-name-${employee.id}`} value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <DialogFooter>
+            <Button onClick={handleEdit} disabled={submitting || !name.trim()}>
+              {submitting ? "Saving…" : "Save changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogTrigger asChild>
+          <Button variant="ghost" size="icon-sm" aria-label="Delete employee">
+            <Trash2 className="size-3.5 text-danger" />
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove this employee?</DialogTitle>
+          </DialogHeader>
+          <p className="text-body-sm text-text-muted">
+            This permanently removes &ldquo;{employee.name}&rdquo; and disables their personal
+            link. Devices and scan history already linked to them are kept, just no longer
+            attributed to a named employee. This cannot be undone.
+          </p>
+          <DialogFooter>
+            <Button variant="destructive" onClick={handleDelete} disabled={submitting}>
+              {submitting ? "Removing…" : "Remove employee"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
 
@@ -183,6 +302,21 @@ export function EmployeeLeaderboard({
     .flatMap((g) => g.employees.map((e) => ({ ...e, locationName: g.location.name })))
     .sort((a, b) => b.scanCount - a.scanCount);
 
+  function handleEmployeeUpdated(id: string, name: string) {
+    setGroups((gs) =>
+      gs.map((g) => ({
+        ...g,
+        employees: g.employees.map((e) => (e.id === id ? { ...e, name } : e)),
+      }))
+    );
+  }
+
+  function handleEmployeeDeleted(id: string) {
+    setGroups((gs) =>
+      gs.map((g) => ({ ...g, employees: g.employees.filter((e) => e.id !== id) }))
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end gap-3 rounded-lg border border-border-default bg-bg-card p-4">
@@ -248,6 +382,11 @@ export function EmployeeLeaderboard({
                           {e.scanCount.toLocaleString()} scans
                         </span>
                         <CopyLinkButton accessToken={e.accessToken} />
+                        <EmployeeControls
+                          employee={e}
+                          onUpdated={handleEmployeeUpdated}
+                          onDeleted={handleEmployeeDeleted}
+                        />
                       </div>
                     </div>
                   ))}
@@ -277,6 +416,11 @@ export function EmployeeLeaderboard({
                   {e.scanCount.toLocaleString()} scans
                 </span>
                 <CopyLinkButton accessToken={e.accessToken} />
+                <EmployeeControls
+                  employee={e}
+                  onUpdated={handleEmployeeUpdated}
+                  onDeleted={handleEmployeeDeleted}
+                />
               </div>
             </div>
           ))}

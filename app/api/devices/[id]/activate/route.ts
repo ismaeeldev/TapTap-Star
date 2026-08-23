@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { devices, locations, employees } from "@/lib/db/schema";
 import { requireSession, authErrorResponse, AuthError } from "@/lib/auth/rbac";
@@ -56,6 +56,13 @@ export async function POST(
       }
     }
 
+    // The status !== "unassigned" check above is a fast-path for the common single-request case
+    // (nice error message without doing the location/employee validation work first) — it is NOT
+    // what actually prevents a double-activation. Two near-simultaneous requests (a double-click
+    // before the button's disabled state lands, or two open tabs) could both pass that read-only
+    // check. The real guard is this UPDATE's WHERE also requiring status = 'unassigned': only one
+    // concurrent request can match a row and get one back from `.returning()` — the other gets an
+    // empty array and is treated as "already activated" below, exactly like the fast-path case.
     const [updated] = await db
       .update(devices)
       .set({
@@ -66,8 +73,15 @@ export async function POST(
         activatedAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(devices.id, id))
+      .where(and(eq(devices.id, id), eq(devices.status, "unassigned")))
       .returning();
+
+    if (!updated) {
+      return NextResponse.json(
+        { message: "This device has already been activated." },
+        { status: 409 }
+      );
+    }
 
     // Trigger #3 (02_APPLICATION_FLOW.md §8): device activation confirmation, to the business
     // owner. Uses the live request origin for the dashboard link, per the Step 4

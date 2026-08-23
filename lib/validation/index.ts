@@ -48,6 +48,11 @@ export const employeeSchema = z.object({
 });
 export type EmployeeInput = z.infer<typeof employeeSchema>;
 
+export const employeeUpdateSchema = z.object({
+  name: z.string().trim().min(1, "Employee name is required").max(200),
+});
+export type EmployeeUpdateInput = z.infer<typeof employeeUpdateSchema>;
+
 export const activateDeviceSchema = z.object({
   locationId: z.uuid("Invalid location"),
   employeeId: z.uuid("Invalid employee").nullable().optional(),

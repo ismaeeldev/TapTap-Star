@@ -31,7 +31,16 @@ export async function GET(req: Request) {
     where: eq(emailVerificationTokens.token, token),
   });
 
-  if (!record || record.usedAt || record.expiresAt < new Date()) {
+  if (!record) {
+    return NextResponse.redirect(new URL("/verify-email?error=invalid_token", appUrl));
+  }
+  // Distinct from a genuinely invalid/expired token — this is the "clicked an already-used link"
+  // case (double-click, or a second tab/device that already completed verification), which
+  // deserves its own message rather than the generic "invalid or expired" one.
+  if (record.usedAt) {
+    return NextResponse.redirect(new URL("/verify-email?error=already_verified", appUrl));
+  }
+  if (record.expiresAt < new Date()) {
     return NextResponse.redirect(new URL("/verify-email?error=invalid_token", appUrl));
   }
 
