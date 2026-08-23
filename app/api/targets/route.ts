@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { targets, locations } from "@/lib/db/schema";
-import { requireSession, authErrorResponse, AuthError } from "@/lib/auth/rbac";
+import { requireSession, requireActiveAccount, authErrorResponse, AuthError } from "@/lib/auth/rbac";
 import { targetSchema } from "@/lib/validation";
 
 // GET /api/targets — every active target for the session account's locations (team target
@@ -41,6 +41,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const session = await requireSession();
+    await requireActiveAccount(session);
     const body = await request.json().catch(() => null);
     const parsed = targetSchema.safeParse(body);
     if (!parsed.success) {

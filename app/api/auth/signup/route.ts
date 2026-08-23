@@ -42,12 +42,21 @@ export async function POST(req: Request) {
   // Every new account is created type: 'business' unconditionally — no Business/Agency
   // selector at signup, per 00_SCOPE_DOCUMENT.md §5.9 (agency status is requested later from
   // /dashboard/settings, Step 7).
+  //
+  // status: 'grace_period' (not the accounts table's own 'active' default) — locked decision,
+  // no free usage at all. No payment method is collected at signup (see the Stripe comment
+  // below), so every new account starts read-only via lib/auth/rbac.ts's requireActiveAccount()
+  // until they add a card in the Customer Portal and a real charge succeeds, which is what
+  // flips this to 'active' (the invoice.payment_succeeded webhook, app/api/billing/webhook/
+  // route.ts). Never 'suspended' here — that status's copy/severity is for a real payment that
+  // already failed once, not a brand-new account that hasn't tried yet.
   const [account] = await db
     .insert(accounts)
     .values({
       type: "business",
       name,
       billingEmail: email,
+      status: "grace_period",
     })
     .returning();
 

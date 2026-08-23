@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { devices, locations, employees } from "@/lib/db/schema";
-import { requireSession, authErrorResponse, AuthError } from "@/lib/auth/rbac";
+import { requireSession, requireActiveAccount, authErrorResponse, AuthError } from "@/lib/auth/rbac";
 import { reassignDeviceSchema } from "@/lib/validation";
 
 // POST /api/devices/:id/reassign — change a device's location and/or employee.
@@ -14,6 +14,7 @@ import { reassignDeviceSchema } from "@/lib/validation";
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await requireSession();
+    await requireActiveAccount(session);
     const { id } = await params;
 
     const device = await db.query.devices.findFirst({

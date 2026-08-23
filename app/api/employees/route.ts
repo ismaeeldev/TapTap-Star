@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db } from "@/lib/db/client";
 import { employees, locations } from "@/lib/db/schema";
-import { requireSession, authErrorResponse, AuthError } from "@/lib/auth/rbac";
+import { requireSession, requireActiveAccount, authErrorResponse, AuthError } from "@/lib/auth/rbac";
 import { employeeSchema } from "@/lib/validation";
 
 // GET /api/employees?locationId=... — list employees for a location, verified to belong to the
@@ -42,6 +42,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const session = await requireSession();
+    await requireActiveAccount(session);
     const body = await request.json().catch(() => null);
     const parsed = employeeSchema.safeParse(body);
     if (!parsed.success) {

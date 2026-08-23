@@ -99,7 +99,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             }
           >
             {account.status === "grace_period"
-              ? "Your last payment failed — your dashboard will become read-only if this isn't resolved. "
+              ? "Add a payment method to activate your account — your dashboard is read-only until a payment succeeds. "
               : "Your account is suspended due to a payment issue — your dashboard is read-only. Devices already in the field keep working for your customers. "}
             <Link href="/dashboard/billing" className="font-medium underline underline-offset-2">
               Update payment method

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { devices, locations, employees } from "@/lib/db/schema";
-import { requireSession, authErrorResponse, AuthError } from "@/lib/auth/rbac";
+import { requireSession, requireActiveAccount, authErrorResponse, AuthError } from "@/lib/auth/rbac";
 import { activateDeviceSchema } from "@/lib/validation";
 import { notify } from "@/lib/email/notify";
 
@@ -16,6 +16,7 @@ export async function POST(
 ) {
   try {
     const session = await requireSession();
+    await requireActiveAccount(session);
     const { id } = await params;
 
     const body = await request.json().catch(() => null);

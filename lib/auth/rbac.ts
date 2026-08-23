@@ -11,7 +11,7 @@
 //   await requireAccountAccess(session, targetAccountId);
 import { auth } from "@/lib/auth/auth";
 import { db } from "@/lib/db/client";
-import { accounts, users } from "@/lib/db/schema";
+import { accounts, users, type Account } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import type { Session } from "next-auth";
 
@@ -101,6 +101,35 @@ export async function requireAccountAccess(
   }
 
   throw new AuthError("Forbidden — you do not have access to this account", 403);
+}
+
+/**
+ * Billing gate (locked decision, user-requested — no free usage at all): throws a 402 unless the
+ * session's account is `status: 'active'`. A brand-new signup is created with `status:
+ * 'grace_period'` (see app/api/auth/signup/route.ts) rather than the DB column's own default of
+ * 'active', specifically so this check blocks a never-paid account exactly like it blocks a real
+ * failed payment — the account only flips to 'active' via the `invoice.payment_succeeded` webhook
+ * once a real payment method is attached and a charge actually succeeds
+ * (app/api/billing/webhook/route.ts). Call this from every route that creates/edits the core
+ * product data (devices, locations, employees, targets, client businesses) — never from the
+ * billing/auth routes themselves, or a blocked account could never reach the Customer Portal to
+ * pay its way back in. Live DB read, same staleness reasoning as isApprovedAgencySession above:
+ * a session's cached fields can't be trusted for this.
+ */
+export async function requireActiveAccount(session: Session): Promise<Account> {
+  const account = await db.query.accounts.findFirst({
+    where: eq(accounts.id, session.user.accountId),
+  });
+  if (!account) {
+    throw new AuthError("Account not found", 404);
+  }
+  if (account.status !== "active") {
+    throw new AuthError(
+      "Add a payment method to activate your account before doing this — go to Billing.",
+      402
+    );
+  }
+  return account;
 }
 
 /** Convenience: turn an AuthError into a NextResponse-shaped { message, status } pair. */

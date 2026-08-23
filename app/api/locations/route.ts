@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { withDbRetry } from "@/lib/db/retry";
 import { locations } from "@/lib/db/schema";
-import { requireSession, authErrorResponse } from "@/lib/auth/rbac";
+import { requireSession, requireActiveAccount, authErrorResponse } from "@/lib/auth/rbac";
 import { locationSchema } from "@/lib/validation";
 
 // GET /api/locations — list the session account's locations (used by the claim wizard's
@@ -29,6 +29,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const session = await requireSession();
+    await requireActiveAccount(session);
     const body = await request.json().catch(() => null);
     const parsed = locationSchema.safeParse(body);
     if (!parsed.success) {

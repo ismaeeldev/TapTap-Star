@@ -38,7 +38,7 @@ export default async function BillingPage() {
           }
         >
           {overview.accountStatus === "grace_period"
-            ? "Your last payment failed. Update your payment method below to avoid your dashboard going read-only."
+            ? "Add a payment method below to activate your account — the rest of your dashboard stays read-only until a payment succeeds."
             : "Your subscription is suspended due to a payment issue. Update your payment method below to restore full access. Devices already in the field keep working for your customers."}
         </div>
       )}

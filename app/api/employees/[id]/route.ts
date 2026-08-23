@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { employees, locations } from "@/lib/db/schema";
-import { requireSession, authErrorResponse, AuthError } from "@/lib/auth/rbac";
+import { requireSession, requireActiveAccount, authErrorResponse, AuthError } from "@/lib/auth/rbac";
 import { employeeUpdateSchema } from "@/lib/validation";
 
 // Employees don't carry their own accountId (they're scoped to a locationId, per the
@@ -24,6 +24,7 @@ async function findOwnedEmployee(id: string, accountId: string) {
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await requireSession();
+    await requireActiveAccount(session);
     const { id } = await params;
 
     const employee = await findOwnedEmployee(id, session.user.accountId);
@@ -61,6 +62,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await requireSession();
+    await requireActiveAccount(session);
     const { id } = await params;
 
     const employee = await findOwnedEmployee(id, session.user.accountId);

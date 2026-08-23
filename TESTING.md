@@ -21,6 +21,10 @@ password? Click **"Forgot password?"** on that same page and follow the emailed 
 This is the core thing Taptapstar does — turning a physical NFC card, plaque, or stand into a
 working review-collector.
 
+**Note**: a brand-new account needs a payment method added first (Billing → Manage payment
+method & invoices) — there's no free trial, so this is expected, not a bug, if it's your very
+first device.
+
 1. Scan the device's NFC tap or QR code with your phone (or open its link directly).
 2. Since it's new, you'll land on the **activation wizard** instead of the review page.
 3. **Step 1**: pick which of your locations this device is for, or add a new one on the spot
@@ -160,6 +164,18 @@ link (see Module 5.5 below).
       your new, empty dashboard with a prompt to activate your first device (not a blank page).
 - [ ] **2.6** Click that same verification link a second time — confirm you see a clear "already
       verified — go to login" message, not the same "invalid link" error as a broken link.
+- [ ] **2.7** **A brand-new account can't actually use the product yet — this is intentional,
+      there's no free trial.** Confirm you see a banner saying something like "Add a payment
+      method to activate your account." Try adding a location, an employee, or activating a
+      device — every one of these should be blocked with a clear message telling you to add a
+      payment method first (never a silent failure, a blank error, or something that just quietly
+      doesn't save).
+- [ ] **2.8** Go to **Billing** → **Manage payment method & invoices** → in Stripe's test page,
+      add the test card `4242 4242 4242 4242` (any future expiry date, any 3-digit CVC). Return to
+      the site — within a minute or two (once Stripe's confirmation reaches the app) confirm the
+      banner disappears and the account shows **Active**. Once that happens, everything blocked
+      in 2.7 should now work normally — this is what the rest of this guide (Module 4 onward)
+      assumes, since the built-in `owner@downtowncafe.local` test account is already active.
 
 ---
 
@@ -181,7 +197,9 @@ link (see Module 5.5 below).
 ## Module 4 — Activating a Device (the core feature)
 
 This simulates what happens when a business owner receives a physical NFC/QR device and scans
-it for the first time.
+it for the first time. The `owner@downtowncafe.local` account is already active/paid, so this
+module works normally with it — a brand-new self-signed-up account needs step 2.7/2.8 (add a
+payment method) done first, or activation is correctly blocked.
 
 - [ ] **4.1** Ask your developer for an **unclaimed device code** (a code that hasn't been
       activated yet). Visit `yoursite.com/r/{code}` — since it's unclaimed, you should land on

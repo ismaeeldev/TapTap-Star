@@ -6,7 +6,13 @@ import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { accounts, users } from "@/lib/db/schema";
-import { requireSession, authErrorResponse, AuthError, isApprovedAgencySession } from "@/lib/auth/rbac";
+import {
+  requireSession,
+  requireActiveAccount,
+  authErrorResponse,
+  AuthError,
+  isApprovedAgencySession,
+} from "@/lib/auth/rbac";
 import { createClientAccountSchema } from "@/lib/validation";
 import { getAgencyClients, rollupClients } from "@/lib/queries/agency";
 import { syncAgencySubscriptionQuantity } from "@/lib/stripe/subscription";
@@ -38,6 +44,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const session = await requireSession();
+    await requireActiveAccount(session);
     await assertApprovedAgency(session);
 
     let body: unknown;

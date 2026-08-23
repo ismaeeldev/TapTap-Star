@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { locations, devices, scans } from "@/lib/db/schema";
-import { requireSession, authErrorResponse, AuthError } from "@/lib/auth/rbac";
+import { requireSession, requireActiveAccount, authErrorResponse, AuthError } from "@/lib/auth/rbac";
 import { locationUpdateSchema } from "@/lib/validation";
 
 // GET /api/locations/:id — location detail (devices at this location + total scan count) for
@@ -51,6 +51,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await requireSession();
+    await requireActiveAccount(session);
     const { id } = await params;
 
     const location = await db.query.locations.findFirst({
@@ -89,6 +90,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await requireSession();
+    await requireActiveAccount(session);
     const { id } = await params;
 
     const location = await db.query.locations.findFirst({
