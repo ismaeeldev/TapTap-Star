@@ -29,11 +29,25 @@ export async function getDefaultPricingPlan(): Promise<PricingPlan> {
  * needs a Price) rather than a separate one-time seed/migration script — this way the very first
  * signup after Step 2 works with zero extra manual setup, and the mechanism is identical to
  * every subsequent price change.
+ *
+ * Verifies a cached `stripePriceId` still exists in Stripe before trusting it (real incident:
+ * Stripe test-mode data got cleared at some point after a Price was cached here, and every
+ * signup afterward failed with "No such price" — permanently, since nothing ever re-checked).
+ * One extra Stripe call, only paid at signup time (this function's only caller), not on every
+ * page load.
  */
 export async function ensureDefaultPlanPriceId(): Promise<{ plan: PricingPlan; priceId: string }> {
   const plan = await getDefaultPricingPlan();
   if (plan.stripePriceId) {
-    return { plan, priceId: plan.stripePriceId };
+    try {
+      await stripe.prices.retrieve(plan.stripePriceId);
+      return { plan, priceId: plan.stripePriceId };
+    } catch (err) {
+      console.error(
+        `[pricing] cached stripePriceId ${plan.stripePriceId} no longer exists in Stripe — recreating it instead of failing every signup`,
+        err
+      );
+    }
   }
 
   const productId = process.env.STRIPE_PRODUCT_ID;
