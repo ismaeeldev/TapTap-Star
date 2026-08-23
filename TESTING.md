@@ -24,11 +24,12 @@ Note: there is only **one** customer-facing dashboard. A business's own employee
 being ranked on the leaderboard) never log into anything — they only get a public, no-login
 personal link (see Module 5.5 below).
 
-**3. A note on emails**: this test environment can only send emails to one specific test inbox,
-not your real email address. If a step says "check your email," ask your developer to confirm
-the email was sent (they can check the email service's dashboard) rather than expecting it in
-your own inbox — this is a testing-environment limitation only, not how it will work for real
-customers once launched.
+**3. A note on emails**: whether emails actually arrive in your inbox depends on whether a real
+email account has been connected yet. If a step says "check your email" and nothing shows up
+after a few minutes (check spam too), ask your developer to confirm an email account is
+connected — the app will always tell you clearly on-screen whether it thinks the email went out
+or not (it never just pretends), so if you see a message like "we couldn't send this email right
+now," that's the app being honest, not a bug.
 
 **4. How to report a problem**: for anything that doesn't work as described, note down:
 (a) which numbered step you were on, (b) what you expected to happen, (c) what actually
@@ -40,8 +41,10 @@ happened. Screenshots help a lot.
 
 - [ ] **1.1** Open the homepage. You should see: a headline, a short explanation of what
       Taptapstar does, a "How it works" section, a features section, an employee leaderboard
-      example, benefits, a pricing card showing one price, example testimonials, FAQ questions,
-      and a contact form. Nothing should look broken or cut off.
+      example, benefits, a pricing card showing one price, a "Preview" testimonials section
+      (clearly marked as illustrative — there's no real customer reviews to show yet, which is
+      expected and intentional, not a bug), FAQ questions, and a contact form. Nothing should
+      look broken or cut off.
 - [ ] **1.2** Click **"Get started"** anywhere on the page (top navigation bar, or the pricing
       card). It should take you to the **sign-up page** — not a contact form.
 - [ ] **1.3** Click **"Pricing"** in the navigation — it should open a dedicated pricing page
@@ -65,14 +68,17 @@ happened. Screenshots help a lot.
 - [ ] **2.1** Click "Get started" → fill in a business name, a real email you can check, and a
       password. Try a password shorter than 8 characters first — confirm you see a message
       telling you the minimum length **before** you even submit (not just after failing).
-- [ ] **2.2** Now use a valid password and submit. You should land on a "check your inbox" page,
-      not an error.
+- [ ] **2.2** Now use a valid password and submit. You should land on a "check your inbox" page
+      (or, if email isn't connected yet in this environment, an honest "we couldn't send this
+      right now" message with a **Resend** button — either is correct, see the email note above).
 - [ ] **2.3** Try signing up again with the exact same email — confirm you get a clear message
       that the email is already registered (not a confusing generic error).
-- [ ] **2.4** Ask your developer to confirm the verification email was sent (see the note above
-      about the test email inbox), and get you the verification link.
+- [ ] **2.4** Ask your developer to confirm the verification email was sent (see the note above),
+      and get you the verification link.
 - [ ] **2.5** Click the verification link — you should be logged in automatically and land on
       your new, empty dashboard with a prompt to activate your first device (not a blank page).
+- [ ] **2.6** Click that same verification link a second time — confirm you see a clear "already
+      verified — go to login" message, not the same "invalid link" error as a broken link.
 
 ---
 
@@ -119,11 +125,19 @@ it for the first time.
 
 ## Quick guide — testing the dashboard's new look
 
-The dashboard was just given a visual refresh (nicer sidebar, cards, hover effects). Here's the
-fast way to sanity-check it took effect everywhere, in under 5 minutes, before doing the full
-Module 5 walkthrough below:
+The dashboard was just given a visual refresh (nicer sidebar, cards, hover effects, and a
+built-in "getting started" tour). Here's the fast way to sanity-check it all took effect, in
+under 5 minutes, before doing the full Module 5 walkthrough below:
 
 - [ ] **Log in** as `owner@downtowncafe.local` — you land on `/dashboard`.
+- [ ] **First-time tour**: on a fresh browser (or after clearing your browser's site data for
+      this app), the very first dashboard visit should pop up a short "welcome" tour that walks
+      through each sidebar item with a small highlighted card. Click through **Next** a couple of
+      times, then click **Skip** — confirm it closes cleanly and doesn't reappear if you refresh
+      the page.
+- [ ] **Replay the tour**: click the **"?"** icon in the top-right corner (next to the sun/moon
+      icon) — confirm it restarts the same tour from the beginning, anytime, not just on first
+      visit.
 - [ ] **Sidebar**: click through every item (Overview, Devices, Locations, Employees, Analytics,
       Billing, Settings). The item you're currently on should show a small colored bar on its
       left edge and a tinted background — you should always be able to tell which page you're on
@@ -164,7 +178,9 @@ Log in as `owner@downtowncafe.local`.
       changes save correctly and show a success message.
 - [ ] **5.4** **Employees page** — confirm you see a ranked leaderboard of employees by scan
       count. Click **"copy personal link"** next to an employee — confirm it copies a link and
-      shows a small confirmation.
+      shows a small confirmation. Then try the small pencil icon to **rename** an employee, and
+      the trash icon to **remove** one (with a confirmation prompt first) — both should save
+      instantly and update the list without needing a page refresh.
 - [ ] **5.5** Open that copied employee link in a **private/incognito browser window** (so
       you're not logged in) — confirm it shows that employee's name, rank, and scan count
       without asking for any login. This is a public, shareable link by design.
@@ -190,7 +206,10 @@ Log in as `owner@downtowncafe.local`.
 ## Module 7 — Billing & Subscription
 
 - [ ] **7.1** Open **Billing** — confirm you see the current plan price, unlimited-usage
-      wording, and a subscription status.
+      wording, and a subscription status. If instead you see "Billing isn't fully set up on this
+      account yet," that's a real signal worth flagging to your developer (it means something
+      went wrong connecting this account to Stripe when it was created) — it's not something to
+      just click past.
 - [ ] **7.2** Click **"Manage payment method & invoices"** — confirm it takes you to a real
       Stripe-hosted page (this uses Stripe's test mode right now — use test card
       `4242 4242 4242 4242`, any future expiry date, any 3-digit CVC, to simulate adding a real
@@ -241,9 +260,10 @@ Log in as `admin@taptapstar.local`.
 
 ## Module 10 — Notifications (Emails)
 
-Ask your developer to confirm (via the email service's dashboard, since this test environment
-can't deliver to arbitrary real inboxes) that an email was triggered for each of these actions
-you've already performed above:
+Check the inbox of whichever email account is connected for this environment (ask your developer
+which one, if you're not sure) to confirm an email arrived for each of these actions you've
+already performed above. If nothing arrives for any of them, ask your developer to check that an
+email account is properly connected — see the note at the top of this guide.
 - [ ] **10.1** Signing up (Module 2.2) → verification email
 - [ ] **10.2** Verifying your email (Module 2.5) → welcome email
 - [ ] **10.3** Activating a device (Module 4.5) → activation confirmation to the owner
