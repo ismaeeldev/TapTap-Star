@@ -21,7 +21,10 @@ export function ManualActivateForm() {
     e.preventDefault();
     const trimmed = code.trim();
     if (!trimmed) {
-      toast.error("Enter the device code first");
+      // toast.warning, not toast.error — this is a light input nudge, not a real failure, so it
+      // should auto-dismiss (toast.error is deliberately permanent app-wide per the theme
+      // guideline's "never auto-hide a real error" rule; this isn't one).
+      toast.warning("Enter the device code first");
       return;
     }
     setSubmitting(true);

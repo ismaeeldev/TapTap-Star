@@ -63,7 +63,7 @@ export default async function DashboardPage() {
     return (
       <GradientMesh className="flex min-h-[60vh] flex-col items-center justify-center gap-8 rounded-lg px-4 py-16">
         <div className="w-full max-w-lg text-center">
-          <p className="text-body-sm text-text-muted">Welcome, {session.user.name}</p>
+          <p className="text-body-sm text-text-muted">Welcome {session.user.name}</p>
           <EmptyState
             icon={Radio}
             title="Activate your first device"

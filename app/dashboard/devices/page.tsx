@@ -5,7 +5,7 @@ import { db } from "@/lib/db/client";
 import { devices, scans } from "@/lib/db/schema";
 import { EmptyState } from "@/components/shared/empty-state";
 import { DevicesTable } from "./devices-table";
-import { ManualActivateForm } from "./manual-activate-form";
+import { ActivateDeviceWidget } from "./activate-device-widget";
 
 export default async function DevicesPage() {
   const session = await auth();
@@ -40,8 +40,8 @@ export default async function DevicesPage() {
       <EmptyState
         icon={Radio}
         title="No devices yet"
-        description="Activate a device by scanning its QR/NFC code, or type its code below if you don't have it in hand."
-        action={<ManualActivateForm />}
+        description="Activate a device by scanning its QR code with your camera."
+        action={<ActivateDeviceWidget />}
       />
     );
   }

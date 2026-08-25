@@ -8,6 +8,16 @@ const HIGHLIGHTS = [
   "One plan — everything included",
 ];
 
+// Generic placeholder business names, not real logos/trademarks — swap these for real client
+// logos the moment there are real customers to show (see the "trusted by" comment below for how).
+const TRUSTED_BY_PLACEHOLDERS = [
+  "Café Nine",
+  "The Grill House",
+  "Studio Twelve",
+  "Northline Auto",
+  "Fresh & Co.",
+];
+
 // Shared shell for signup/login/verify-email/forgot-password/reset-password.
 // Split brand panel + form on desktop; stacked mesh + glass card on mobile.
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
@@ -64,9 +74,24 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             </ul>
           </div>
 
-          <p className="relative z-10 text-caption text-text-muted">
-            Trusted by teams growing reviews with every tap.
-          </p>
+          {/* "Trusted by" row — placeholder business names, not real logos (see the constant's
+              own comment above for why, and how to swap in real ones later: replace each
+              TRUSTED_BY_PLACEHOLDERS string with a real client's logo image once one exists). */}
+          <div className="relative z-10 space-y-3">
+            <p className="text-caption text-text-muted">
+              Trusted by teams growing reviews with every tap.
+            </p>
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 opacity-70">
+              {TRUSTED_BY_PLACEHOLDERS.map((name) => (
+                <span
+                  key={name}
+                  className="font-display text-body-sm font-semibold tracking-tight text-text-secondary"
+                >
+                  {name}
+                </span>
+              ))}
+            </div>
+          </div>
         </aside>
 
         <div className="relative flex flex-col justify-center px-4 py-12 sm:px-8">
