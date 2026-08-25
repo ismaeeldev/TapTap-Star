@@ -31,11 +31,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             <Logo className="scale-110" />
           </Link>
 
-          {/* Image + headline layered with a slight overlap (negative margin pulling the text up
-              under the card) instead of two evenly-stacked blocks — reads as one composed piece
-              rather than a generic top-to-bottom list. Image capped at a fixed width (not the
-              container width) so it can't push the panel taller than the viewport, and centered
-              horizontally in the panel (mx-auto) rather than left-aligned with the text below. */}
+          {/* Image capped at a fixed width (not the container width) so it can't push the panel
+              taller than the viewport, and centered horizontally in the panel (mx-auto) rather
+              than left-aligned with the text below. A small top margin below separates it from
+              the headline. */}
           <div className="relative z-10 mx-auto w-fit max-w-[18rem] shrink-0 overflow-hidden rounded-2xl shadow-[0_20px_45px_-18px_var(--brand)] xl:max-w-[21rem]">
             <Image
               src="/login_image.png"
@@ -47,7 +46,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             />
           </div>
 
-          <div className="relative z-10 -mt-2 max-w-lg xl:-mt-3">
+          <div className="relative z-10 mt-3 max-w-lg xl:mt-4">
             <p className="font-display text-display-md font-bold tracking-tight text-text-primary xl:text-display-lg">
               Turn every tap into a{" "}
               <span className="gradient-text">Google review</span>
