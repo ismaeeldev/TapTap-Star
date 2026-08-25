@@ -3,12 +3,6 @@ import Image from "next/image";
 import { Logo } from "@/components/shared/logo";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 
-const HIGHLIGHTS = [
-  "NFC + QR devices that open your Google review page",
-  "Live scan analytics and employee leaderboards",
-  "One plan — everything included",
-];
-
 // "Trusted by" partner logos deliberately not shown yet — client is sending real client logos to
 // use here; do not fill this with placeholder/generic logos in the meantime (explicit "skip for
 // now" instruction). Add a real logo row here once those arrive.
@@ -40,8 +34,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           {/* Image + headline layered with a slight overlap (negative margin pulling the text up
               under the card) instead of two evenly-stacked blocks — reads as one composed piece
               rather than a generic top-to-bottom list. Image capped at a fixed width (not the
-              container width) so it can't push the panel taller than the viewport. */}
-          <div className="relative z-10 w-fit max-w-[15rem] shrink-0 overflow-hidden rounded-2xl shadow-[0_20px_45px_-18px_var(--brand)] xl:max-w-[17rem]">
+              container width) so it can't push the panel taller than the viewport, and centered
+              horizontally in the panel (mx-auto) rather than left-aligned with the text below. */}
+          <div className="relative z-10 mx-auto w-fit max-w-[18rem] shrink-0 overflow-hidden rounded-2xl shadow-[0_20px_45px_-18px_var(--brand)] xl:max-w-[21rem]">
             <Image
               src="/login_image.png"
               alt="Physical NFC review cards, each linking straight to a Google review"
@@ -57,31 +52,6 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
               Turn every tap into a{" "}
               <span className="gradient-text">Google review</span>
             </p>
-            <p className="mt-3 text-body-sm text-text-secondary xl:text-body">
-              The dashboard for scans, rankings, and growth — built for teams that want more
-              five-star reviews without more busywork.
-            </p>
-            <ul className="mt-6 space-y-2.5">
-              {HIGHLIGHTS.map((item) => (
-                <li key={item} className="flex items-start gap-3 text-body-sm text-text-secondary">
-                  <span
-                    aria-hidden
-                    className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-brand/15 text-brand"
-                  >
-                    <svg viewBox="0 0 16 16" className="size-3" fill="none" aria-hidden>
-                      <path
-                        d="M3.5 8.5 6.5 11.5 12.5 4.5"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </span>
-                  {item}
-                </li>
-              ))}
-            </ul>
           </div>
         </aside>
 
