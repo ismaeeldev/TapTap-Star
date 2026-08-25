@@ -23,7 +23,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       </div>
 
       <div className="grid min-h-svh lg:grid-cols-2">
-        <aside className="gradient-mesh relative hidden overflow-hidden lg:flex lg:flex-col lg:gap-8 lg:overflow-y-auto lg:px-12 lg:py-12 xl:px-16">
+        <aside className="gradient-mesh relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-center lg:px-12 lg:py-10 xl:px-16">
           <div
             aria-hidden
             className="pointer-events-none absolute inset-0 opacity-[0.04] mix-blend-overlay"
@@ -33,11 +33,15 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             }}
           />
 
-          <Link href="/" className="relative z-10 w-fit shrink-0">
+          <Link href="/" className="relative z-10 mb-6 w-fit shrink-0 xl:mb-8">
             <Logo className="scale-110" />
           </Link>
 
-          <div className="relative z-10 mx-auto w-full max-w-sm shrink-0 overflow-hidden rounded-2xl shadow-lg">
+          {/* Image + headline layered with a slight overlap (negative margin pulling the text up
+              under the card) instead of two evenly-stacked blocks — reads as one composed piece
+              rather than a generic top-to-bottom list. Image capped at a fixed width (not the
+              container width) so it can't push the panel taller than the viewport. */}
+          <div className="relative z-10 w-fit max-w-[15rem] shrink-0 overflow-hidden rounded-2xl shadow-[0_20px_45px_-18px_var(--brand)] xl:max-w-[17rem]">
             <Image
               src="/login_image.png"
               alt="Physical NFC review cards, each linking straight to a Google review"
@@ -48,16 +52,16 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             />
           </div>
 
-          <div className="relative z-10 max-w-lg">
+          <div className="relative z-10 -mt-2 max-w-lg xl:-mt-3">
             <p className="font-display text-display-md font-bold tracking-tight text-text-primary xl:text-display-lg">
               Turn every tap into a{" "}
               <span className="gradient-text">Google review</span>
             </p>
-            <p className="mt-4 text-body text-text-secondary">
+            <p className="mt-3 text-body-sm text-text-secondary xl:text-body">
               The dashboard for scans, rankings, and growth — built for teams that want more
               five-star reviews without more busywork.
             </p>
-            <ul className="mt-10 space-y-4">
+            <ul className="mt-6 space-y-2.5">
               {HIGHLIGHTS.map((item) => (
                 <li key={item} className="flex items-start gap-3 text-body-sm text-text-secondary">
                   <span
