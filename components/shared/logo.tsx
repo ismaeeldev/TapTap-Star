@@ -1,37 +1,28 @@
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
-// Client-provided logo assets (public/favicon.png — the "T + star" icon mark, public/logo.png —
-// the "TaptapStar" wordmark) — replaces the earlier generated SVG mark + HTML text version.
-// Both are transparent-background PNGs designed to sit on either theme, so unlike the previous
-// version this needs no light/dark variant switching (no useTheme, no "use client").
+// Client-provided wordmark (public/logo.png). The other client asset, public/favicon.png (the
+// "T + star" icon mark), is used ONLY as the actual browser favicon (app/icon.png) — client
+// explicitly asked for it to not appear anywhere alongside the logo in the UI anymore. `iconOnly`
+// is kept as a no-op prop (existing call sites in dashboard/admin mobile headers still pass it)
+// rather than ripping it out everywhere, since there's now just the one wordmark asset to show
+// regardless of context.
 export function Logo({
   className,
-  iconOnly = false,
 }: {
   className?: string;
   iconOnly?: boolean;
 }) {
   return (
-    <span className={cn("inline-flex items-center gap-2.5", className)}>
+    <span className={cn("inline-flex items-center", className)}>
       <Image
-        src="/favicon.png"
-        alt={iconOnly ? "Taptapstar" : ""}
-        width={36}
-        height={36}
-        className="size-9 shrink-0"
+        src="/logo.png"
+        alt="Taptapstar"
+        width={168}
+        height={28}
+        className="h-7 w-auto"
         priority
       />
-      {!iconOnly && (
-        <Image
-          src="/logo.png"
-          alt="Taptapstar"
-          width={168}
-          height={28}
-          className="h-7 w-auto"
-          priority
-        />
-      )}
     </span>
   );
 }

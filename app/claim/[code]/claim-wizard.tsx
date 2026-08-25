@@ -542,8 +542,18 @@ function NewEmployeeForm({
 // ones.
 function SuccessScreen({ deviceId }: { deviceId: string }) {
   return (
-    <Card variant="glass" className="items-center text-center">
-      <CardHeader className="items-center">
+    <Card variant="glass" className="w-full items-center text-center">
+      {/* CardHeader is a CSS grid (see components/ui/card.tsx) nested inside Card's flex column.
+          Without an explicit width, the flex item (CardHeader) and the grid track inside it can
+          disagree on how wide the box actually is — the grid track sizes itself to its content's
+          max-content width while the flex item's own box stays at a narrower intrinsic width,
+          so children end up positioned relative to a wider column than the box that's actually
+          visible, reading as "the icon is shoved off to one side" (this is what the client
+          reported as the activation screen "not being responsive"). `w-full` on the Card forces
+          an unambiguous width the whole way down instead of relying on flex/grid intrinsic
+          sizing to agree on their own. `justify-items-center` on CardHeader is still needed too
+          — `items-center` alone only centers vertically, not horizontally. */}
+      <CardHeader className="w-full items-center justify-items-center">
         <motion.svg
           width="72"
           height="72"

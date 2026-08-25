@@ -67,7 +67,7 @@ function VerifyEmailContent() {
 
   return (
     <Card variant="glass">
-      <CardHeader className="items-center text-center">
+      <CardHeader className="items-center justify-items-center text-center">
         <div className="mb-2 flex size-14 items-center justify-center rounded-full bg-brand-subtle text-brand">
           <MailCheck className="size-7" />
         </div>

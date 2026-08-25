@@ -1,9 +1,11 @@
 "use client";
 
-import { motion } from "framer-motion";
+import * as React from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Smartphone, Star, Wifi } from "lucide-react";
 import { SectionHeader } from "@/components/marketing/section-header";
-import { staggerContainer, fadeUp, marketingInView } from "@/lib/motion";
 
 const STEPS = [
   {
@@ -23,20 +25,23 @@ const STEPS = [
   },
 ];
 
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
+
 // Original illustration of the tap/scan -> Google review flow, built from primitives (not the
 // client's raw plate photo — that asset lives under ../Refrence/ and is explicitly not used
 // directly here, only as loose inspiration for the rounded-plate silhouette). Pure SVG/CSS.
-function FlowIllustration() {
+// The traveling-arc `pathLength` animation is still Framer Motion (it's a single, cheap,
+// self-contained SVG stroke reveal, not a scroll-position measurement the pinned hero above it
+// could desync) — only the *scroll-triggered entrance* below was moved to GSAP.
+function FlowIllustration({ reduceMotion }: { reduceMotion: boolean }) {
   return (
-    <motion.svg
+    <svg
       viewBox="0 0 480 200"
       className="mx-auto w-full max-w-xl"
       role="img"
       aria-label="A customer taps a Taptapstar device, which redirects them to leave a Google review"
-      initial={{ opacity: 0, y: 16 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={marketingInView}
-      transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
     >
       <defs>
         <linearGradient id="plateGradient" x1="0" y1="0" x2="1" y2="1">
@@ -64,9 +69,9 @@ function FlowIllustration() {
         stroke="var(--gradient-2)"
         strokeWidth="2.5"
         strokeDasharray="6 6"
-        initial={{ pathLength: 0, opacity: 0 }}
-        whileInView={{ pathLength: 1, opacity: 1 }}
-        viewport={marketingInView}
+        initial={reduceMotion ? false : { pathLength: 0, opacity: 0 }}
+        whileInView={reduceMotion ? undefined : { pathLength: 1, opacity: 1 }}
+        viewport={{ once: true, amount: 0.25 }}
         transition={{ duration: 1.1, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
       />
 
@@ -82,31 +87,70 @@ function FlowIllustration() {
       ))}
       <rect x="345" y="105" width="100" height="6" rx="3" fill="var(--bg-muted)" />
       <rect x="345" y="118" width="70" height="6" rx="3" fill="var(--bg-muted)" />
-    </motion.svg>
+    </svg>
   );
 }
 
 export function HowItWorks() {
+  const reduceMotion = useReducedMotion();
+  const sectionRef = React.useRef<HTMLElement>(null);
+  const illustrationRef = React.useRef<HTMLDivElement>(null);
+  const stepsRef = React.useRef<HTMLDivElement>(null);
+
+  // Scroll-triggered entrance moved from Framer Motion's whileInView (an IntersectionObserver,
+  // measured independently of scroll position) to GSAP ScrollTrigger — the same engine the
+  // pinned hero above this section uses. Two separate scroll-observation systems on the same
+  // page is what was actually causing the "not smooth" feel the client reported: the hero's
+  // pin-spacer resizes the document during its own scroll range, and Framer's observer would
+  // sometimes fire before that resize settled, producing a late/jerky reveal right as this
+  // section came into view. GSAP's own ScrollTrigger.refresh() (called after the hero's pin
+  // context is set up, see hero.tsx) keeps every ScrollTrigger instance in sync with the same
+  // recalculated layout, this one included.
+  React.useEffect(() => {
+    if (reduceMotion) return;
+    const section = sectionRef.current;
+    const illustration = illustrationRef.current;
+    const steps = stepsRef.current;
+    if (!section || !illustration || !steps) return;
+
+    const stepItems = steps.querySelectorAll(":scope > div");
+
+    const ctx = gsap.context(() => {
+      gsap.set(illustration, { opacity: 0, y: 16 });
+      gsap.set(stepItems, { opacity: 0, y: 16 });
+
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: section,
+          start: "top 75%",
+          once: true,
+        },
+      });
+
+      tl.to(illustration, { opacity: 1, y: 0, duration: 0.55, ease: "power3.out" }).to(
+        stepItems,
+        { opacity: 1, y: 0, duration: 0.5, ease: "power3.out", stagger: 0.12 },
+        "-=0.25"
+      );
+    }, section);
+
+    return () => ctx.revert();
+  }, [reduceMotion]);
+
   return (
-    <section id="how-it-works" className="mx-auto max-w-6xl px-6 py-20 md:px-8 md:py-28">
+    <section ref={sectionRef} id="how-it-works" className="mx-auto max-w-6xl px-6 py-20 md:px-8 md:py-28">
       <SectionHeader
         eyebrow="How it works"
         title="From tap to five stars in seconds"
       />
 
-      <div className="mt-14">
-        <FlowIllustration />
+      <div ref={illustrationRef} className="mt-14">
+        <FlowIllustration reduceMotion={!!reduceMotion} />
       </div>
 
-      <motion.div
-        variants={staggerContainer}
-        initial="hidden"
-        whileInView="visible"
-        viewport={marketingInView}
-        className="mt-14 grid gap-8 md:grid-cols-3"
-      >
+      <div ref={stepsRef} className="mt-14 grid gap-8 md:grid-cols-3">
         {STEPS.map((step, i) => (
-          <motion.div key={step.title} variants={fadeUp} className="text-center md:text-left">
+          <div key={step.title} className="text-center md:text-left">
             <div className="mx-auto flex size-11 items-center justify-center rounded-full bg-brand-subtle text-brand md:mx-0">
               <step.icon className="size-5" />
             </div>
@@ -115,9 +159,9 @@ export function HowItWorks() {
             </p>
             <h3 className="mt-1 text-h3 font-semibold text-text-primary">{step.title}</h3>
             <p className="mt-2 text-body text-text-secondary">{step.body}</p>
-          </motion.div>
+          </div>
         ))}
-      </motion.div>
+      </div>
     </section>
   );
 }
