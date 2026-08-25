@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Logo } from "@/components/shared/logo";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 
@@ -8,15 +9,9 @@ const HIGHLIGHTS = [
   "One plan — everything included",
 ];
 
-// Generic placeholder business names, not real logos/trademarks — swap these for real client
-// logos the moment there are real customers to show (see the "trusted by" comment below for how).
-const TRUSTED_BY_PLACEHOLDERS = [
-  "Café Nine",
-  "The Grill House",
-  "Studio Twelve",
-  "Northline Auto",
-  "Fresh & Co.",
-];
+// "Trusted by" partner logos deliberately not shown yet — client is sending real client logos to
+// use here; do not fill this with placeholder/generic logos in the meantime (explicit "skip for
+// now" instruction). Add a real logo row here once those arrive.
 
 // Shared shell for signup/login/verify-email/forgot-password/reset-password.
 // Split brand panel + form on desktop; stacked mesh + glass card on mobile.
@@ -28,7 +23,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       </div>
 
       <div className="grid min-h-svh lg:grid-cols-2">
-        <aside className="gradient-mesh relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-between lg:px-12 lg:py-12 xl:px-16">
+        <aside className="gradient-mesh relative hidden overflow-hidden lg:flex lg:flex-col lg:gap-8 lg:overflow-y-auto lg:px-12 lg:py-12 xl:px-16">
           <div
             aria-hidden
             className="pointer-events-none absolute inset-0 opacity-[0.04] mix-blend-overlay"
@@ -38,9 +33,20 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             }}
           />
 
-          <Link href="/" className="relative z-10 w-fit">
+          <Link href="/" className="relative z-10 w-fit shrink-0">
             <Logo className="scale-110" />
           </Link>
+
+          <div className="relative z-10 mx-auto w-full max-w-sm shrink-0 overflow-hidden rounded-2xl shadow-lg">
+            <Image
+              src="/login_image.png"
+              alt="Physical NFC review cards, each linking straight to a Google review"
+              width={1122}
+              height={1402}
+              className="h-auto w-full object-cover"
+              priority
+            />
+          </div>
 
           <div className="relative z-10 max-w-lg">
             <p className="font-display text-display-md font-bold tracking-tight text-text-primary xl:text-display-lg">
@@ -72,25 +78,6 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
                 </li>
               ))}
             </ul>
-          </div>
-
-          {/* "Trusted by" row — placeholder business names, not real logos (see the constant's
-              own comment above for why, and how to swap in real ones later: replace each
-              TRUSTED_BY_PLACEHOLDERS string with a real client's logo image once one exists). */}
-          <div className="relative z-10 space-y-3">
-            <p className="text-caption text-text-muted">
-              Trusted by teams growing reviews with every tap.
-            </p>
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 opacity-70">
-              {TRUSTED_BY_PLACEHOLDERS.map((name) => (
-                <span
-                  key={name}
-                  className="font-display text-body-sm font-semibold tracking-tight text-text-secondary"
-                >
-                  {name}
-                </span>
-              ))}
-            </div>
           </div>
         </aside>
 
