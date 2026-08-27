@@ -40,6 +40,11 @@ const BASE_STEPS: Step[] = [
     description: "A live leaderboard, shareable personal links, and monthly scan targets.",
   },
   {
+    tourId: "nav-agency",
+    title: "Agency",
+    description: "Request agency access to manage multiple client businesses from one account.",
+  },
+  {
     tourId: "nav-analytics",
     title: "Analytics",
     description: "Scan trends over time — filter by location or device, export as CSV or PDF.",

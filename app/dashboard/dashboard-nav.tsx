@@ -19,6 +19,11 @@ const NAV_ITEMS = [
   { href: "/dashboard/devices", label: "Devices", icon: Radio, tourId: "nav-devices" },
   { href: "/dashboard/locations", label: "Locations", icon: MapPin, tourId: "nav-locations" },
   { href: "/dashboard/employees", label: "Employees", icon: Users, tourId: "nav-employees" },
+  // Client-requested (Modifications 3 PDF, item 1): "Agency access is not a setting, is an
+  // option for some clients, so I don't think that this should be in Settings." — moved out of
+  // the Settings page into its own dedicated sidebar item (both a business account's request
+  // panel and an approved agency's status/Clients pointer now live at /dashboard/agency).
+  { href: "/dashboard/agency", label: "Agency", icon: Building2, tourId: "nav-agency" },
   { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3, tourId: "nav-analytics" },
   { href: "/dashboard/billing", label: "Billing", icon: CreditCard, tourId: "nav-billing" },
   { href: "/dashboard/settings", label: "Settings", icon: Settings, tourId: "nav-settings" },
@@ -30,9 +35,9 @@ export function DashboardNav({ showClients = false }: { showClients?: boolean })
   const pathname = usePathname();
   const items = showClients
     ? [
-        ...NAV_ITEMS.slice(0, 4),
+        ...NAV_ITEMS.slice(0, 5),
         { href: "/dashboard/clients", label: "Clients", icon: Building2, tourId: "nav-clients" },
-        ...NAV_ITEMS.slice(4),
+        ...NAV_ITEMS.slice(5),
       ]
     : NAV_ITEMS;
 

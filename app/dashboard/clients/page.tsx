@@ -11,7 +11,7 @@ import { getAgencyClients, rollupClients } from "@/lib/queries/agency";
 // requireAccountAccess-adjacent check, per 03_DATA_MODEL_AND_ARCHITECTURE.md §4. Uses a live DB
 // re-check (isApprovedAgencySession), not the session's cached fields — see that function's doc
 // comment in lib/auth/rbac.ts: without this, a just-approved agency's own already-open browser
-// session would still be denied here even though /dashboard/settings (which queries the DB
+// session would still be denied here even though /dashboard/agency (which queries the DB
 // directly) already told them they're approved.
 export default async function ClientsPage() {
   const session = await auth();
