@@ -26,7 +26,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="flex min-h-svh flex-col bg-bg-page lg:flex-row">
       <aside className="border-b border-border-default bg-bg-surface px-4 py-3 lg:w-64 lg:shrink-0 lg:border-b-0 lg:border-r lg:px-4 lg:py-6">
-        <div className="mb-6 hidden lg:block">
+        <div className="mb-6 hidden flex-col items-center lg:flex">
           <Logo />
           <p className="mt-1 text-caption font-medium tracking-wide text-text-muted uppercase">
             Admin

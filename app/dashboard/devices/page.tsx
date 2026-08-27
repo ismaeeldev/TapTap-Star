@@ -48,11 +48,17 @@ export default async function DevicesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-h2 font-display font-semibold text-text-primary">Devices</h1>
-        <p className="text-body-sm text-text-muted">
-          Every NFC/QR device on your account, its status, location, and lifetime scan count.
-        </p>
+      {/* Was missing entirely once >=1 device existed — the only way to activate a device was
+          the empty-state widget above, which disappears the moment there's a first device. A
+          real client-reported gap: no way to link a second/third device from here at all. */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-h2 font-display font-semibold text-text-primary">Devices</h1>
+          <p className="text-body-sm text-text-muted">
+            Every NFC/QR device on your account, its status, location, and lifetime scan count.
+          </p>
+        </div>
+        <ActivateDeviceWidget />
       </div>
       <DevicesTable devices={deviceRows} />
     </div>

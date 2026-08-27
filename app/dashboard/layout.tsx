@@ -51,7 +51,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div className="flex min-h-svh flex-col bg-bg-page lg:flex-row">
       <aside className="border-b border-border-default bg-bg-surface px-4 py-3 shadow-xs lg:w-64 lg:shrink-0 lg:border-r lg:border-b-0 lg:px-4 lg:py-6">
-        <div className="mb-6 hidden border-b border-border-default pb-6 lg:block">
+        <div className="mb-6 hidden justify-center border-b border-border-default pb-6 lg:flex">
           <Link href="/dashboard" className="no-underline">
             <Logo />
           </Link>

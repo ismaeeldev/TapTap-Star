@@ -106,7 +106,10 @@ export function HowItWorks() {
   // section came into view. GSAP's own ScrollTrigger.refresh() (called after the hero's pin
   // context is set up, see hero.tsx) keeps every ScrollTrigger instance in sync with the same
   // recalculated layout, this one included.
-  React.useEffect(() => {
+  // useLayoutEffect, not useEffect — see hero.tsx's matching comment for the full reasoning
+  // (useEffect's cleanup is a passive effect, too late to undo GSAP's DOM changes before React's
+  // own deletion commit on a fast unmount).
+  React.useLayoutEffect(() => {
     if (reduceMotion) return;
     const section = sectionRef.current;
     const illustration = illustrationRef.current;
@@ -134,7 +137,15 @@ export function HowItWorks() {
       );
     }, section);
 
-    return () => ctx.revert();
+    return () => {
+      ctx.revert();
+      // Same defensive kill as hero.tsx's cleanup (see its comment for the full reasoning) —
+      // this section doesn't pin, but shares the same page and the same rapid-navigation race
+      // class, so it gets the same safety net for consistency.
+      ScrollTrigger.getAll().forEach((trigger) => {
+        if (trigger.trigger === section) trigger.kill();
+      });
+    };
   }, [reduceMotion]);
 
   return (
