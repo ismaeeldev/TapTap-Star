@@ -10,6 +10,15 @@ import { cn } from "@/lib/utils";
 // admin mobile headers still pass it) rather than ripping it out everywhere, since there's just
 // the one wordmark (per theme) to show regardless of context.
 //
+// public/logo_dark.png as originally supplied had a huge amount of transparent padding baked
+// into its canvas (its visible text only filled ~48% of the image's height, vs. ~95% for
+// logo.png) — both were rendered at the same fixed CSS height, so the dark-mode logo's actual
+// text came out roughly half the size everywhere it appeared (navbar, footer, dashboard, admin
+// — every place this shared component renders). Fixed by trimming the source file's transparent
+// padding (sharp's `.trim()`) rather than compensating with a larger className size, since that
+// would have just meant guessing a different fudge-factor per surface instead of fixing the
+// actual mismatch once at the source.
+//
 // Swapped via Tailwind's `dark:` variant (both images render, one hidden via CSS) rather than a
 // client-side useTheme() check — keeps this a server component with no hydration-mismatch flash
 // between server-rendered light and the user's actual saved theme.
@@ -32,7 +41,7 @@ export function Logo({
       <Image
         src="/logo_dark.png"
         alt="Taptapstar"
-        width={168}
+        width={164}
         height={28}
         className="hidden h-7 w-auto dark:block"
         priority
