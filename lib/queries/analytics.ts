@@ -91,6 +91,38 @@ export async function getMostUsedLocation(
   return { locationId: top.locationId, name: top.name, googleReviewUrl: top.googleReviewUrl, scanCount: top.count };
 }
 
+export type LocationBreakdownPoint = { name: string; scans: number };
+
+/**
+ * Client-requested (Modifications 3 PDF, item 2): "This analytics I want to have like a graphic
+ * for seeing usage, maybe an option like the second image too" — referencing a pie-chart example
+ * with percentage slices. Scan count grouped by location within the range, same scoping/filters
+ * as every other KPI here (a single-location filter naturally collapses this to one slice, which
+ * is the expected/correct behavior, not a bug).
+ */
+export async function getScansByLocation(
+  filters: AnalyticsFilters,
+  range: DateRange
+): Promise<LocationBreakdownPoint[]> {
+  const conditions = [
+    eq(locations.accountId, filters.accountId),
+    gte(scans.scannedAt, range.start),
+    lt(scans.scannedAt, range.end),
+  ];
+  if (filters.locationId) conditions.push(eq(scans.locationId, filters.locationId));
+  if (filters.deviceId) conditions.push(eq(scans.deviceId, filters.deviceId));
+
+  const rows = await db
+    .select({ name: locations.name, count: sql<number>`count(${scans.id})::int` })
+    .from(scans)
+    .innerJoin(locations, eq(scans.locationId, locations.id))
+    .where(and(...conditions))
+    .groupBy(locations.id, locations.name)
+    .orderBy(sql`count(${scans.id}) desc`);
+
+  return rows.map((r) => ({ name: r.name, scans: r.count }));
+}
+
 export type TimeSeriesPoint = { date: string; scans: number };
 
 /**
@@ -131,6 +163,7 @@ export type AnalyticsSummary = {
   // so there is no real conversion-tracking data in the schema to compute a true conversion rate
   // from — the trend of scan volume itself is the closest honest proxy available).
   timeSeries: TimeSeriesPoint[];
+  byLocation: LocationBreakdownPoint[];
 };
 
 function pctChange(current: number, previous: number): number | null {
@@ -141,13 +174,15 @@ function pctChange(current: number, previous: number): number | null {
 export async function getAnalyticsSummary(filters: AnalyticsFilters): Promise<AnalyticsSummary> {
   const prevRange = previousPeriod(filters.range);
 
-  const [totalScans, prevScans, activeDevices, mostUsedLocation, timeSeries] = await Promise.all([
-    getScanCount(filters, filters.range),
-    getScanCount(filters, prevRange),
-    getActiveDeviceCount(filters),
-    getMostUsedLocation(filters, filters.range),
-    getScansTimeSeries(filters, filters.range),
-  ]);
+  const [totalScans, prevScans, activeDevices, mostUsedLocation, timeSeries, byLocation] =
+    await Promise.all([
+      getScanCount(filters, filters.range),
+      getScanCount(filters, prevRange),
+      getActiveDeviceCount(filters),
+      getMostUsedLocation(filters, filters.range),
+      getScansTimeSeries(filters, filters.range),
+      getScansByLocation(filters, filters.range),
+    ]);
 
   const trend = pctChange(totalScans, prevScans);
 
@@ -164,6 +199,7 @@ export async function getAnalyticsSummary(filters: AnalyticsFilters): Promise<An
       : null,
     conversionTrendPercent: trend,
     timeSeries,
+    byLocation,
   };
 }
 

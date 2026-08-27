@@ -11,6 +11,10 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
 } from "recharts";
 import { ArrowDown, ArrowUp, BarChart3, Download, Loader2, RotateCcw } from "lucide-react";
 import { StatTile } from "@/components/shared/stat-tile";
@@ -40,7 +44,21 @@ type AnalyticsSummary = {
   mostUsedLocation: { name: string; googleReviewUrl: string; scanCount: number } | null;
   conversionTrendPercent: number | null;
   timeSeries: { date: string; scans: number }[];
+  byLocation: { name: string; scans: number }[];
 };
+
+// Client-requested (Modifications 3 PDF, item 2): "like a graphic for seeing usage, maybe an
+// option like the second image too" — a pie/percentage-slice breakdown. Reuses the app's own
+// brand/gradient palette (theme tokens) rather than inventing new colors, cycling if there are
+// more locations than swatches.
+const PIE_COLORS = [
+  "var(--brand)",
+  "var(--gradient-2)",
+  "var(--success)",
+  "var(--warning)",
+  "var(--danger)",
+  "var(--text-muted)",
+];
 
 function toDateInputValue(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -375,6 +393,49 @@ export default function AnalyticsPage() {
             </ResponsiveContainer>
           </Card>
           </motion.div>
+
+          {/* Client-requested (Modifications 3 PDF, item 2): a pie/percentage breakdown view,
+              alongside the existing line chart rather than replacing it — the line chart answers
+              "when," this answers "where." Hidden when there's only one (or zero) location slice
+              to show, since a pie chart with a single 100% slice conveys nothing a stat tile
+              doesn't already say. */}
+          {summary.byLocation.length > 1 && (
+            <motion.div initial="hidden" animate="visible" variants={fadeUp}>
+              <Card className="px-6">
+                <p className="mb-4 text-body-sm font-medium text-text-primary">Scans by location</p>
+                <ResponsiveContainer width="100%" height={280}>
+                  <PieChart>
+                    <Pie
+                      data={summary.byLocation}
+                      dataKey="scans"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={90}
+                      label={({ percent }) => `${Math.round((percent ?? 0) * 100)}%`}
+                    >
+                      {summary.byLocation.map((entry, i) => (
+                        <Cell key={entry.name} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        background: "var(--bg-card)",
+                        border: "1px solid var(--border-default)",
+                        borderRadius: 8,
+                        fontSize: 13,
+                        color: "var(--text-primary)",
+                      }}
+                      formatter={(value, name) => [`${Number(value).toLocaleString()} scans`, name]}
+                    />
+                    <Legend
+                      wrapperStyle={{ fontSize: 13, color: "var(--text-secondary)" }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </Card>
+            </motion.div>
+          )}
         </>
       )}
     </div>
