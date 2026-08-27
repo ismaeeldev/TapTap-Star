@@ -22,6 +22,17 @@ import { cn } from "@/lib/utils";
 // Swapped via Tailwind's `dark:` variant (both images render, one hidden via CSS) rather than a
 // client-side useTheme() check — keeps this a server component with no hydration-mismatch flash
 // between server-rendered light and the user's actual saved theme.
+//
+// Both images are forced to the exact same fixed pixel width (LOGO_WIDTH) rather than letting
+// each keep its own natural aspect-ratio width (168px vs 164px, close but not identical) —
+// client-reported bug: any parent using `justify-center` (e.g. the dashboard sidebar) recenters
+// around the visible child's actual width, so a ~4px width difference between the two logos
+// made the whole lockup visibly shift a few pixels sideways on every theme toggle. Pinning both
+// to one identical width (with `object-contain` so neither image distorts) makes the toggle
+// truly zero-layout-shift instead of approximately so.
+const LOGO_WIDTH = 166;
+const LOGO_HEIGHT = 28;
+
 export function Logo({
   className,
 }: {
@@ -29,21 +40,22 @@ export function Logo({
   iconOnly?: boolean;
 }) {
   return (
-    <span className={cn("inline-flex items-center", className)}>
+    <span
+      className={cn("relative inline-block", className)}
+      style={{ width: LOGO_WIDTH, height: LOGO_HEIGHT }}
+    >
       <Image
         src="/logo.png"
         alt="Taptapstar"
-        width={168}
-        height={28}
-        className="h-7 w-auto dark:hidden"
+        fill
+        className="object-contain object-left dark:hidden"
         priority
       />
       <Image
         src="/logo_dark.png"
         alt="Taptapstar"
-        width={164}
-        height={28}
-        className="hidden h-7 w-auto dark:block"
+        fill
+        className="hidden object-contain object-left dark:block"
         priority
       />
     </span>
