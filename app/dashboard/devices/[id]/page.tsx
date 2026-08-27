@@ -50,15 +50,20 @@ export default async function DeviceDetailPage({
         </dl>
       </div>
 
-      {device.status === "active" && (
-        <DeviceActions
-          deviceId={device.id}
-          currentStatus={device.status}
-          currentLocationId={device.locationId}
-          currentEmployeeId={device.employeeId}
-          locations={accountLocations.map((l) => ({ id: l.id, name: l.name }))}
-        />
-      )}
+      {/* Client-requested (Modifications 3 PDF, items 4/6): "the option to reassign the device
+          to a new url and not permanent deactivation" / "how can I manage devices active and if
+          I want to reassign them to another url or change something?" — DeviceActions (which
+          already has a full Reassign flow) was previously hidden entirely for any non-active
+          device, leaving deactivated devices with zero available actions and no way back. Now
+          shown for every status; the Deactivate button inside is conditionally hidden by
+          DeviceActions itself when there's nothing left to deactivate. */}
+      <DeviceActions
+        deviceId={device.id}
+        currentStatus={device.status}
+        currentLocationId={device.locationId}
+        currentEmployeeId={device.employeeId}
+        locations={accountLocations.map((l) => ({ id: l.id, name: l.name }))}
+      />
 
       <div className="rounded-lg border border-border-default bg-bg-card p-6">
         <p className="mb-3 text-body-sm font-semibold text-text-primary">Live scan feed</p>

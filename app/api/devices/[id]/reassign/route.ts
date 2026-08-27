@@ -67,9 +67,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     // locationChanged && no employeeId submitted => employeeId stays null (cleared), per the
     // integrity rule above.
 
+    // Client-requested (Modifications 3 PDF, items 4/6): "the option to reassign the device to a
+    // new url and not permanent deactivation." A deactivated device previously stayed
+    // deactivated forever even after a successful reassign — there was no path back to active at
+    // all. Reassigning now reactivates it, since picking a new location/employee is exactly the
+    // "give this device a new home" action the client is asking reassign to mean.
     const [updated] = await db
       .update(devices)
-      .set({ locationId: parsed.data.locationId, employeeId, updatedAt: new Date() })
+      .set({
+        locationId: parsed.data.locationId,
+        employeeId,
+        status: "active",
+        updatedAt: new Date(),
+      })
       .where(eq(devices.id, id))
       .returning();
 

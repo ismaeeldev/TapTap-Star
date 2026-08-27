@@ -26,6 +26,7 @@ type EmployeeOption = { id: string; name: string };
 
 export function DeviceActions({
   deviceId,
+  currentStatus,
   currentLocationId,
   currentEmployeeId,
   locations,
@@ -133,7 +134,9 @@ export function DeviceActions({
           <DialogHeader>
             <DialogTitle>Reassign device</DialogTitle>
             <DialogDescription>
-              Move this device to a different location and/or employee.
+              {currentStatus === "deactivated"
+                ? "Move this device to a location and/or employee — saving reactivates it."
+                : "Move this device to a different location and/or employee."}
             </DialogDescription>
           </DialogHeader>
 
@@ -193,25 +196,33 @@ export function DeviceActions({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={deactivateOpen} onOpenChange={setDeactivateOpen}>
-        <DialogTrigger asChild>
-          <Button variant="destructive">Deactivate</Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Deactivate this device?</DialogTitle>
-            <DialogDescription>
-              Scans will stop redirecting customers to your Google review link until this device
-              is reassigned. This cannot be undone from here.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="destructive" onClick={handleDeactivate} disabled={submitting}>
-              {submitting ? "Deactivating…" : "Deactivate device"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Client-requested (Modifications 3 PDF, items 4/6): deactivation was previously
+          presented as permanent ("cannot be undone from here"), which is what led the client to
+          ask for a reassign-instead-of-deactivate option in the first place. Reassign now
+          reactivates a deactivated device (see reassign/route.ts), so the Deactivate button only
+          makes sense while the device is currently active — hidden once it's already
+          deactivated, since Reassign is now the only (and correct) way back. */}
+      {currentStatus !== "deactivated" && (
+        <Dialog open={deactivateOpen} onOpenChange={setDeactivateOpen}>
+          <DialogTrigger asChild>
+            <Button variant="destructive">Deactivate</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Deactivate this device?</DialogTitle>
+              <DialogDescription>
+                Scans will stop redirecting customers to your Google review link until this
+                device is reassigned to a location again.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="destructive" onClick={handleDeactivate} disabled={submitting}>
+                {submitting ? "Deactivating…" : "Deactivate device"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
