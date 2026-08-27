@@ -32,12 +32,16 @@ export function DevicesTable({ devices }: { devices: DeviceRow[] }) {
       <Card className="hidden overflow-hidden py-0 md:block">
         <Table>
           <TableHeader>
+            {/* Client-requested (Modifications 3 PDF, item 7): "aligned each thing with is
+                title... not displaced to the right. In the bottom mid point of each title." —
+                every column, header and cell alike, centered rather than the previous
+                left-default / text-right-on-Scans mix. */}
             <TableRow className="hover:bg-transparent">
-              <TableHead>Code</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Location</TableHead>
-              <TableHead>Employee</TableHead>
-              <TableHead className="text-right">Scans</TableHead>
+              <TableHead className="text-center">Code</TableHead>
+              <TableHead className="text-center">Status</TableHead>
+              <TableHead className="text-center">Location</TableHead>
+              <TableHead className="text-center">Employee</TableHead>
+              <TableHead className="text-center">Scans</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -47,13 +51,13 @@ export function DevicesTable({ devices }: { devices: DeviceRow[] }) {
                 className="cursor-pointer"
                 onClick={() => router.push(`/dashboard/devices/${d.id}`)}
               >
-                <TableCell className="font-mono">{d.code}</TableCell>
-                <TableCell>
+                <TableCell className="text-center font-mono">{d.code}</TableCell>
+                <TableCell className="text-center">
                   <StatusBadge status={d.status} />
                 </TableCell>
-                <TableCell>{d.location?.name ?? "—"}</TableCell>
-                <TableCell>{d.employee?.name ?? "—"}</TableCell>
-                <TableCell className="text-right font-semibold">
+                <TableCell className="text-center">{d.location?.name ?? "—"}</TableCell>
+                <TableCell className="text-center">{d.employee?.name ?? "—"}</TableCell>
+                <TableCell className="text-center font-semibold">
                   {d.scanCount.toLocaleString()}
                 </TableCell>
               </TableRow>
