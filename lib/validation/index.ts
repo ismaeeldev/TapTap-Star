@@ -162,6 +162,15 @@ export const contactFormSchema = z.object({
 });
 export type ContactFormInput = z.infer<typeof contactFormSchema>;
 
+// Client-requested (Modifications 3 PDF, item 8): "I want a support option so people can contact
+// me if any problem" — clarified as the business owner contacting Taptapstar support, not
+// end-customers contacting the business. Just `message` — name/email come from the logged-in
+// session server-side, not free text, so there's no impersonation risk in what gets stored.
+export const dashboardSupportSchema = z.object({
+  message: z.string().trim().min(1, "Message is required").max(5000),
+});
+export type DashboardSupportInput = z.infer<typeof dashboardSupportSchema>;
+
 // --- Step 10: internal admin panel ---
 
 export const batchGenerateSchema = z.object({

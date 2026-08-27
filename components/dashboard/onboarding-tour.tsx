@@ -55,6 +55,11 @@ const BASE_STEPS: Step[] = [
     description: "Your subscription, invoice history, and payment method.",
   },
   {
+    tourId: "nav-support",
+    title: "Support",
+    description: "Have a problem or a question? Send a message straight to the Taptapstar team.",
+  },
+  {
     tourId: "theme-toggle",
     title: "Light & dark mode",
     description: "Switch themes anytime — your dashboard remembers your choice.",

@@ -11,6 +11,7 @@ import {
   CreditCard,
   Settings,
   Building2,
+  LifeBuoy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +28,10 @@ const NAV_ITEMS = [
   { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3, tourId: "nav-analytics" },
   { href: "/dashboard/billing", label: "Billing", icon: CreditCard, tourId: "nav-billing" },
   { href: "/dashboard/settings", label: "Settings", icon: Settings, tourId: "nav-settings" },
+  // Client-requested (Modifications 3 PDF, item 8): "I want a support option so people can
+  // contact me if any problem" — clarified as the business owner reaching Taptapstar's own
+  // support team. See app/dashboard/support/page.tsx.
+  { href: "/dashboard/support", label: "Support", icon: LifeBuoy, tourId: "nav-support" },
 ];
 
 // "Clients" only shows for approved agency accounts — /dashboard/clients itself also enforces
