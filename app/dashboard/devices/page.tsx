@@ -58,7 +58,17 @@ export default async function DevicesPage() {
             Every NFC/QR device on your account, its status, location, and lifetime scan count.
           </p>
         </div>
-        <ActivateDeviceWidget />
+        {/* Client-requested (Modifications 3 PDF, item 2): a text label above the scan button so
+            it's clear what it does at a glance, not just a bare "Scan QR code" button. Only added
+            here (not inside ActivateDeviceWidget itself) — the empty-state usage above already has
+            its own "No devices yet" heading doing the same job; duplicating it there would be
+            redundant. */}
+        <div className="flex flex-col items-center gap-2">
+          <p className="text-caption font-semibold uppercase tracking-wide text-text-muted">
+            Add a new device
+          </p>
+          <ActivateDeviceWidget />
+        </div>
       </div>
       <DevicesTable devices={deviceRows} />
     </div>
