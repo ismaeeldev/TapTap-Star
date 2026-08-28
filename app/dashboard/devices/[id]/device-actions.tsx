@@ -268,10 +268,10 @@ export function DeviceActions({
           <DialogHeader>
             <DialogTitle>Reset this device?</DialogTitle>
             <DialogDescription>
-              This permanently deletes all scan history for this device and unassigns it from
-              your account. The code becomes claimable again from scratch — anyone who scans it
-              will go through the setup wizard as if it were a brand-new device. This cannot be
-              undone.
+              This permanently deletes all scan history for this device — including from its
+              location&apos;s and employee&apos;s all-time totals — and unassigns it from your
+              account. The code becomes claimable again from scratch — anyone who scans it will
+              go through the setup wizard as if it were a brand-new device. This cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-1.5">

@@ -45,7 +45,15 @@ export function ProfileForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.message ?? "Failed to save changes");
-      toast.success("Profile updated");
+      // Auth.js's JWT session strategy freezes name/email at login time (no SessionProvider /
+      // client-side session.update() is set up anywhere in this app — every other screen reads
+      // session.user.name straight from the server-side auth() call, which reflects the *token*,
+      // not the DB). router.refresh() re-renders this page against the fresh DB read it already
+      // does itself (see settings/page.tsx), so the name typed here shows correctly — but the
+      // dashboard header greeting, sidebar initials, and the Support page's prefilled "From" field
+      // all read the frozen JWT and won't catch up until the next login. Told directly here rather
+      // than silently leaving a stale display elsewhere with no explanation.
+      toast.success("Profile updated — your name will show everywhere else after you next log in");
       router.refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");

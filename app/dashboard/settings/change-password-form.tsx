@@ -10,11 +10,12 @@ import { changePasswordSchema } from "@/lib/validation";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
-type FieldErrors = Partial<Record<"currentPassword" | "newPassword", string>>;
+type FieldErrors = Partial<Record<"currentPassword" | "newPassword" | "confirmPassword", string>>;
 
 export function ChangePasswordForm() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [errors, setErrors] = useState<FieldErrors>({});
   const [loading, setLoading] = useState(false);
 
@@ -26,6 +27,14 @@ export function ChangePasswordForm() {
         currentPassword: flat.currentPassword?.[0],
         newPassword: flat.newPassword?.[0],
       });
+      return;
+    }
+    // Client-side only — a typo in the new password field has nothing else to catch it before
+    // the request succeeds and silently locks the user out on their next login. The API itself
+    // only needs one newPassword value (no confirm field in changePasswordSchema); this check is
+    // purely a "did you mean to type that" guard on this form, not a security control.
+    if (newPassword !== confirmPassword) {
+      setErrors({ confirmPassword: "Passwords don't match" });
       return;
     }
     setErrors({});
@@ -41,6 +50,7 @@ export function ChangePasswordForm() {
       toast.success("Password changed");
       setCurrentPassword("");
       setNewPassword("");
+      setConfirmPassword("");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -84,6 +94,21 @@ export function ChangePasswordForm() {
             className={cn(errors.newPassword && "border-danger focus-visible:border-danger")}
           />
           {errors.newPassword && <p className="text-caption text-danger">{errors.newPassword}</p>}
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="settings-confirm-password">Confirm new password</Label>
+          <Input
+            id="settings-confirm-password"
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            aria-invalid={!!errors.confirmPassword}
+            className={cn(errors.confirmPassword && "border-danger focus-visible:border-danger")}
+          />
+          {errors.confirmPassword && (
+            <p className="text-caption text-danger">{errors.confirmPassword}</p>
+          )}
         </div>
 
         <Button type="submit" disabled={loading} className="self-start">

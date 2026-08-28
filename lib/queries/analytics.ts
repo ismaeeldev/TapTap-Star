@@ -91,7 +91,11 @@ export async function getMostUsedLocation(
   return { locationId: top.locationId, name: top.name, googleReviewUrl: top.googleReviewUrl, scanCount: top.count };
 }
 
-export type LocationBreakdownPoint = { name: string; scans: number };
+// locationId included (not just name) so the pie chart can key its Cell elements on a value
+// that's actually unique per row — location names aren't enforced unique per account anywhere
+// (no unique index/duplicate check on insert), so two same-named locations would otherwise
+// collide on a name-only React key and risk mis-assigned slice colors/tooltips.
+export type LocationBreakdownPoint = { locationId: string; name: string; scans: number };
 
 /**
  * Client-requested (Modifications 3 PDF, item 2): "This analytics I want to have like a graphic
@@ -113,14 +117,18 @@ export async function getScansByLocation(
   if (filters.deviceId) conditions.push(eq(scans.deviceId, filters.deviceId));
 
   const rows = await db
-    .select({ name: locations.name, count: sql<number>`count(${scans.id})::int` })
+    .select({
+      locationId: locations.id,
+      name: locations.name,
+      count: sql<number>`count(${scans.id})::int`,
+    })
     .from(scans)
     .innerJoin(locations, eq(scans.locationId, locations.id))
     .where(and(...conditions))
     .groupBy(locations.id, locations.name)
     .orderBy(sql`count(${scans.id}) desc`);
 
-  return rows.map((r) => ({ name: r.name, scans: r.count }));
+  return rows.map((r) => ({ locationId: r.locationId, name: r.name, scans: r.count }));
 }
 
 export type TimeSeriesPoint = { date: string; scans: number };

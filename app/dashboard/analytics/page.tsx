@@ -44,7 +44,7 @@ type AnalyticsSummary = {
   mostUsedLocation: { name: string; googleReviewUrl: string; scanCount: number } | null;
   conversionTrendPercent: number | null;
   timeSeries: { date: string; scans: number }[];
-  byLocation: { name: string; scans: number }[];
+  byLocation: { locationId: string; name: string; scans: number }[];
 };
 
 // Client-requested (Modifications 3 PDF, item 2): "like a graphic for seeing usage, maybe an
@@ -415,7 +415,7 @@ export default function AnalyticsPage() {
                       label={({ percent }) => `${Math.round((percent ?? 0) * 100)}%`}
                     >
                       {summary.byLocation.map((entry, i) => (
-                        <Cell key={entry.name} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                        <Cell key={entry.locationId} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip
