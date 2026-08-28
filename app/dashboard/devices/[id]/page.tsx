@@ -59,6 +59,7 @@ export default async function DeviceDetailPage({
           DeviceActions itself when there's nothing left to deactivate. */}
       <DeviceActions
         deviceId={device.id}
+        deviceCode={device.code}
         currentStatus={device.status}
         currentLocationId={device.locationId}
         currentEmployeeId={device.employeeId}

@@ -12,6 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -26,12 +27,14 @@ type EmployeeOption = { id: string; name: string };
 
 export function DeviceActions({
   deviceId,
+  deviceCode,
   currentStatus,
   currentLocationId,
   currentEmployeeId,
   locations,
 }: {
   deviceId: string;
+  deviceCode: string;
   currentStatus: string;
   currentLocationId: string | null;
   currentEmployeeId: string | null;
@@ -41,6 +44,8 @@ export function DeviceActions({
 
   const [reassignOpen, setReassignOpen] = useState(false);
   const [deactivateOpen, setDeactivateOpen] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetConfirmText, setResetConfirmText] = useState("");
   const [selectedLocationId, setSelectedLocationId] = useState(currentLocationId ?? "");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [employeeOptions, setEmployeeOptions] = useState<EmployeeOption[]>([]);
@@ -89,6 +94,25 @@ export function DeviceActions({
       router.refresh();
     } catch {
       toast.error("Failed to reassign device — check your connection and try again");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleReset() {
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/devices/${deviceId}/reset`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.message ?? "Failed to reset device");
+        return;
+      }
+      toast.success("Device reset — the code can now be scanned as a brand-new device");
+      router.push("/dashboard/devices");
+      router.refresh();
+    } catch {
+      toast.error("Failed to reset device — check your connection and try again");
     } finally {
       setSubmitting(false);
     }
@@ -223,6 +247,56 @@ export function DeviceActions({
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Client-requested (Modifications 5 PDF): "the option to eliminate device so later people
+          could scan again from the beginning and it acts as a new device." Not a real row
+          delete — see reset/route.ts's comment for why a hard delete would actually break the
+          re-claim flow the client is asking for. Gated behind typing the device code, not just a
+          click, since this permanently erases real scan history (unlike Deactivate/Reassign,
+          which are both fully reversible). */}
+      <Dialog
+        open={resetOpen}
+        onOpenChange={(open) => {
+          setResetOpen(open);
+          if (!open) setResetConfirmText("");
+        }}
+      >
+        <DialogTrigger asChild>
+          <Button variant="destructive">Reset device</Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset this device?</DialogTitle>
+            <DialogDescription>
+              This permanently deletes all scan history for this device and unassigns it from
+              your account. The code becomes claimable again from scratch — anyone who scans it
+              will go through the setup wizard as if it were a brand-new device. This cannot be
+              undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <label className="text-body-sm font-medium text-text-primary">
+              Type the device code to confirm
+            </label>
+            <Input
+              type="text"
+              value={resetConfirmText}
+              onChange={(e) => setResetConfirmText(e.target.value)}
+              placeholder={deviceCode}
+              className="font-mono"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="destructive"
+              onClick={handleReset}
+              disabled={submitting || resetConfirmText !== deviceCode}
+            >
+              {submitting ? "Resetting…" : "Reset device"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
