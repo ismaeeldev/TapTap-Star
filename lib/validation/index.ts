@@ -32,6 +32,23 @@ export const resetPasswordSchema = z.object({
 });
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 
+// Client-requested (Modifications 5 PDF): "Settings is not developed." — the first real pass at
+// account self-service: editable profile fields and a proper in-session password change.
+export const updateProfileSchema = z.object({
+  name: z.string().trim().min(1, "Your name is required").max(200),
+  accountName: z.string().trim().min(1, "Business name is required").max(200),
+});
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(72, "Password is too long"),
+});
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+
 // --- Step 4: locations / employees / device activation ---
 
 export const locationSchema = z.object({

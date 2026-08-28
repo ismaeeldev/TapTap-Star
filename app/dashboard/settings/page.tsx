@@ -1,8 +1,26 @@
-// Client-requested (Modifications 3 PDF, item 1): "Agency access is not a setting, is an option
-// for some clients, so I don't think that this should be in Settings." — the AgencyRequestPanel
-// block that used to live here has moved to its own dedicated /dashboard/agency page/nav item
-// (see app/dashboard/agency/page.tsx and dashboard-nav.tsx).
+import { eq } from "drizzle-orm";
+import { auth } from "@/lib/auth/auth";
+import { db } from "@/lib/db/client";
+import { accounts, users } from "@/lib/db/schema";
+import { ProfileForm } from "./profile-form";
+import { ChangePasswordForm } from "./change-password-form";
+
+// Client-requested (Modifications 5 PDF): "Settings is not developed." — first real pass: profile
+// (name / business name) and a proper change-password form. Agency access moved out of this page
+// to its own /dashboard/agency item in an earlier round — see that page for the reasoning.
 export default async function SettingsPage() {
+  const session = await auth();
+  if (!session?.user) return null;
+
+  // Read name/email straight from the DB, not session.user — the JWT session strategy
+  // (lib/auth/auth.config.ts) freezes name/email at login time, so a save-then-view on this
+  // page would otherwise keep showing the pre-edit value until the next login.
+  const [account, user] = await Promise.all([
+    db.query.accounts.findFirst({ where: eq(accounts.id, session.user.accountId) }),
+    db.query.users.findFirst({ where: eq(users.id, session.user.id) }),
+  ]);
+  if (!account || !user) return null;
+
   return (
     <div className="max-w-2xl space-y-6">
       <div>
@@ -10,11 +28,8 @@ export default async function SettingsPage() {
         <p className="text-body-sm text-text-muted">Account preferences and access.</p>
       </div>
 
-      <div className="rounded-lg border border-border-default bg-bg-card p-6">
-        <p className="text-body-sm text-text-muted">
-          More account preferences are coming here soon.
-        </p>
-      </div>
+      <ProfileForm name={user.name} accountName={account.name} email={user.email} />
+      <ChangePasswordForm />
     </div>
   );
 }
