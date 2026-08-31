@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { QrScanFillButton } from "@/components/dashboard/qr-scan-fill-button";
 import { toast } from "@/lib/toast";
 
 type LocationOption = { id: string; name: string };
@@ -53,6 +54,10 @@ export function DeviceActions({
   const [submitting, setSubmitting] = useState(false);
 
   const locationChanged = selectedLocationId !== currentLocationId;
+  // Case/whitespace-insensitive — see the reset dialog's comment above for why (this confirms
+  // intent, it isn't a credential; session auth is the actual access control on this action).
+  const isResetConfirmMatch =
+    resetConfirmText.trim().toLowerCase() === deviceCode.trim().toLowerCase();
 
   async function loadEmployees(locationId: string, opts?: { preserveSelection?: boolean }) {
     setLoadingEmployees(true);
@@ -253,7 +258,16 @@ export function DeviceActions({
           delete — see reset/route.ts's comment for why a hard delete would actually break the
           re-claim flow the client is asking for. Gated behind typing the device code, not just a
           click, since this permanently erases real scan history (unlike Deactivate/Reassign,
-          which are both fully reversible). */}
+          which are both fully reversible).
+
+          Follow-up fix (client): "Plates doesn't have alphanumeric codes. Only QR codes." — the
+          physical card/plate device has no printed code to read off of, and the confirm input's
+          code was previously shown ONLY as a vanishing placeholder (gone the instant you start
+          typing), forcing the person to memorize a random string from a fleeting glance or keep
+          scrolling back up to the page's own <h1>. The code is now shown as persistent text next
+          to the field (never disappears while typing), and matching is case/whitespace-insensitive
+          since this is a "did you mean to click this" safety check, not a security credential —
+          the actual account/session auth is what protects this action, not this string match. */}
       <Dialog
         open={resetOpen}
         onOpenChange={(open) => {
@@ -275,22 +289,30 @@ export function DeviceActions({
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-1.5">
-            <label className="text-body-sm font-medium text-text-primary">
-              Type the device code to confirm
-            </label>
+            <div className="flex items-center justify-between gap-3">
+              <label className="text-body-sm font-medium text-text-primary">
+                Type the device code to confirm:{" "}
+                <span className="font-mono text-brand">{deviceCode}</span>
+              </label>
+              <QrScanFillButton onScan={setResetConfirmText} />
+            </div>
             <Input
               type="text"
               value={resetConfirmText}
               onChange={(e) => setResetConfirmText(e.target.value)}
-              placeholder={deviceCode}
+              placeholder="Type the code above, or scan the device's QR"
               className="font-mono"
             />
+            <p className="text-caption text-text-muted">
+              No code printed on the device? Use &quot;Scan QR instead&quot; to fill this in
+              automatically.
+            </p>
           </div>
           <DialogFooter>
             <Button
               variant="destructive"
               onClick={handleReset}
-              disabled={submitting || resetConfirmText !== deviceCode}
+              disabled={submitting || !isResetConfirmMatch}
             >
               {submitting ? "Resetting…" : "Reset device"}
             </Button>
