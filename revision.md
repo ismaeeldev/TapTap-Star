@@ -200,12 +200,14 @@ browser test before moving to the next, committed and pushed individually:
    shipped flat ($60/mo) for now — the per-location increment is deferred, see §2.3/§3.1.
 2. ✅ **Done** — Stripe: real Price objects + trial period wiring (commit `ec7585a`).
    Verified against real Stripe test mode.
-3. ⏳ **In progress** — Marketing pricing page: 3-tier UI.
-4. Signup: plan selection.
-5. Dashboard billing: plan switcher.
-6. Location cap enforcement for capped tiers.
-7. (Separate, later) AI review-response feature — only after its own scoping questions
-   are answered.
+3. ✅ **Done** — Marketing pricing page: 3-tier UI at `/pricing` (commit `174b557`).
+   Verified light/dark/mobile, zero regressions on homepage/FAQ.
+4. ⏳ **Not started** — Signup: plan selection + real card collection (Stripe Elements or
+   Checkout — doesn't exist yet for any tier today).
+5. ⏳ **Not started** — Dashboard billing: plan switcher (upgrade/downgrade anytime).
+6. ⏳ **Not started** — Location cap enforcement for capped tiers.
+7. ⏳ **Not started, separate/later** — AI review-response feature — only after its own
+   scoping questions are answered (§2.3).
 
 Each of the above is its own commit, its own live Playwright verification, its own
 push to both `origin` and `me-origin`, matching the established pattern for this project.
