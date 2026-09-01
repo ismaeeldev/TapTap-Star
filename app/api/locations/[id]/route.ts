@@ -4,6 +4,7 @@ import { db } from "@/lib/db/client";
 import { locations, devices, scans } from "@/lib/db/schema";
 import { requireSession, requireActiveAccount, authErrorResponse, AuthError } from "@/lib/auth/rbac";
 import { locationUpdateSchema } from "@/lib/validation";
+import { syncNetworkLocationQuantity } from "@/lib/stripe/subscription";
 
 // GET /api/locations/:id — location detail (devices at this location + total scan count) for
 // /dashboard/locations/[id].
@@ -118,6 +119,18 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     }
 
     await db.delete(locations).where(eq(locations.id, id));
+
+    // Network tier's "+$10/mo per location beyond the first" (revision.md §2.1/§2.3) — a
+    // deleted location must reduce the billed quantity, same non-blocking pattern as the
+    // create path in app/api/locations/route.ts.
+    try {
+      await syncNetworkLocationQuantity(session.user.accountId);
+    } catch (err) {
+      console.error(
+        `[locations] Stripe location-quantity sync failed after delete for account ${session.user.accountId} — billing sync should be investigated/retried.`,
+        err
+      );
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {

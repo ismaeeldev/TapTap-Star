@@ -40,8 +40,6 @@ export async function getBillingOverview(accountId: string): Promise<BillingOver
   const plan = await getPricingPlanByKey(account.planKey);
   const managedBusinessCount =
     account.type === "agency" ? await getAgencyManagedBusinessCount(accountId) : null;
-  const amountCents =
-    account.type === "agency" ? (managedBusinessCount ?? 0) * plan.priceCents : plan.priceCents;
 
   // Modifications 5 pricing restructure: an account can accumulate more than one
   // subscriptions row over its lifetime now (a Free->paid switch creates a brand-new Stripe
@@ -54,6 +52,16 @@ export async function getBillingOverview(accountId: string): Promise<BillingOver
     where: eq(subscriptions.accountId, accountId),
     orderBy: [desc(subscriptions.createdAt)],
   });
+
+  // Network's per-location increment (revision.md §2.1/§2.3) means the true billed amount for
+  // a business account isn't always just plan.priceCents flat — syncNetworkLocationQuantity
+  // keeps subscriptions.amountCents accurate (base + N × perExtraLocationCents) for exactly
+  // this reason, so prefer that real synced total when a subscription row exists, falling back
+  // to the flat plan price only for Free (no subscription at all) or a not-yet-synced state.
+  const amountCents =
+    account.type === "agency"
+      ? (managedBusinessCount ?? 0) * plan.priceCents
+      : (sub?.amountCents ?? plan.priceCents);
   const invoiceRows = await db.query.invoices.findMany({
     where: eq(invoices.accountId, accountId),
     orderBy: [desc(invoices.createdAt)],

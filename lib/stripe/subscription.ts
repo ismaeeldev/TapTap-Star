@@ -1,13 +1,15 @@
 // Stripe customer/subscription lifecycle helpers — Step 8. Kept separate from pricing.ts
 // (pure calculation) so the actual Stripe API calls + local `subscriptions` row writes live in
 // one place, reused by signup and the agency quantity-sync trigger.
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import type Stripe from "stripe";
 import { db } from "@/lib/db/client";
-import { accounts, subscriptions } from "@/lib/db/schema";
+import { accounts, locations, subscriptions } from "@/lib/db/schema";
 import { stripe } from "@/lib/stripe/client";
+import { AuthError } from "@/lib/auth/rbac";
 import {
   ensureDefaultPlanPriceId,
+  ensureExtraLocationPriceId,
   ensurePlanPriceId,
   getAgencyManagedBusinessCount,
   getDefaultPricingPlan,
@@ -162,6 +164,86 @@ export async function syncAgencySubscriptionQuantity(agencyAccountId: string): P
 }
 
 /**
+ * Network tier's "+$10/mo per location beyond the first" (revision.md §2.1/§2.3), completed as
+ * a real follow-up after the initial 6-step pricing rollout. Called whenever a Network account's
+ * location count changes (location create/reset — see app/api/locations/route.ts and
+ * app/api/devices/[id]/reset/route.ts's own callers) to keep the real Stripe subscription's
+ * quantity in sync, same shape as syncAgencySubscriptionQuantity above but for a SECOND
+ * subscription item (the base $60 item stays quantity 1 always; this manages a distinct
+ * per-location item alongside it) rather than the account's only item.
+ *
+ * A no-op for any account that isn't currently on the network plan, or has no Stripe
+ * subscription yet (e.g. mid-signup) — safe to call unconditionally from any location
+ * create/delete path without the caller needing to check the account's plan first.
+ */
+export async function syncNetworkLocationQuantity(accountId: string): Promise<void> {
+  const account = await db.query.accounts.findFirst({ where: eq(accounts.id, accountId) });
+  if (!account || account.planKey !== "network") return;
+
+  const sub = await db.query.subscriptions.findFirst({
+    where: eq(subscriptions.accountId, accountId),
+    orderBy: [desc(subscriptions.createdAt)],
+  });
+  if (!sub?.stripeSubscriptionId) return;
+
+  const [{ count: locationCount }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(locations)
+    .where(eq(locations.accountId, accountId));
+  // Billed quantity is locations beyond the first — the base $60 item already covers location 1.
+  const extraLocationQuantity = Math.max(0, locationCount - 1);
+
+  const plan = await getPricingPlanByKey("network");
+  const stripeSub = await stripe.subscriptions.retrieve(sub.stripeSubscriptionId);
+  const baseItem = stripeSub.items.data.find((i) => i.price.id !== plan.stripeExtraLocationPriceId);
+  const extraLocationItem = stripeSub.items.data.find(
+    (i) => i.price.id === plan.stripeExtraLocationPriceId
+  );
+
+  try {
+    const extraLocationPriceId = await ensureExtraLocationPriceId(plan);
+
+    if (extraLocationQuantity === 0) {
+      // Nothing extra to bill — remove the per-location item entirely if one exists, rather
+      // than leaving a quantity-0 item sitting on the subscription (Stripe allows quantity 0,
+      // but a clean "no item at all" state is simpler to reason about and matches the base
+      // case of "1 location, no increment" exactly).
+      if (extraLocationItem) {
+        await stripe.subscriptionItems.del(extraLocationItem.id);
+      }
+    } else if (extraLocationItem) {
+      await stripe.subscriptionItems.update(extraLocationItem.id, { quantity: extraLocationQuantity });
+    } else {
+      await stripe.subscriptionItems.create({
+        subscription: sub.stripeSubscriptionId,
+        price: extraLocationPriceId,
+        quantity: extraLocationQuantity,
+      });
+    }
+  } catch (err) {
+    // Same expected constraint as syncAgencySubscriptionQuantity above — a subscription still
+    // in `incomplete` status (no payment method) rejects item updates. Log and skip the Stripe
+    // push; the local amountCents below still gets updated so the app's own UI reflects the
+    // real intended charge even if the actual Stripe sync catches up later.
+    const stripeErr = err as { type?: string; message?: string };
+    if (stripeErr?.type === "StripeInvalidRequestError") {
+      console.log(
+        `[syncNetworkLocationQuantity] account ${accountId}: skipped Stripe item sync — subscription not in an updatable state yet (${stripeErr.message})`
+      );
+    } else {
+      throw err;
+    }
+  }
+
+  const amountCents = (baseItem?.price?.unit_amount ?? plan.priceCents) +
+    extraLocationQuantity * (plan.perExtraLocationCents ?? 0);
+  await db
+    .update(subscriptions)
+    .set({ amountCents, updatedAt: new Date() })
+    .where(eq(subscriptions.id, sub.id));
+}
+
+/**
  * Modifications 5 pricing restructure (revision.md §3.2) — creates a real Stripe Customer +
  * Subscription for one of the new tiers (premium/network), WITH a card required upfront and a
  * real trial period, per the client's explicit confirmation ("Yes, card since the beginning" —
@@ -274,6 +356,30 @@ export async function changeSubscriptionPlan({
   const account = await db.query.accounts.findFirst({ where: eq(accounts.id, accountId) });
   if (!account) throw new Error(`Account ${accountId} not found`);
 
+  // Guard against downgrading into a location cap the account already exceeds — e.g. a Network
+  // account with 3 locations switching to Premium/Free (locationLimit: 1) would otherwise keep
+  // all 3 locations on a plan meant to cap at 1, silently bypassing the exact enforcement
+  // app/api/locations/route.ts's POST handler applies to NEW locations. Checked once here,
+  // before any transition branch, rather than per-branch, since every transition that changes
+  // planKey needs this same check regardless of which Stripe-level shape it takes.
+  const newPlan = await getPricingPlanByKey(newPlanKey);
+  if (newPlan.locationLimit !== null) {
+    const [{ count: currentLocationCount }] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(locations)
+      .where(eq(locations.accountId, accountId));
+    if (currentLocationCount > newPlan.locationLimit) {
+      // AuthError, not a plain Error — app/api/billing/change-plan/route.ts's catch block
+      // (authErrorResponse) only surfaces a plain Error's real message for AuthError instances;
+      // any other thrown Error is deliberately flattened to a generic "Something went wrong"
+      // 500, which would have silently hidden this specific, actionable message from the user.
+      throw new AuthError(
+        `You have ${currentLocationCount} locations, but ${newPlan.name} only allows ${newPlan.locationLimit}. Delete locations down to the limit before switching.`,
+        400
+      );
+    }
+  }
+
   // Ordered by createdAt desc — an account can now have more than one subscriptions row over
   // its lifetime (a Free->paid switch below creates a brand-new one rather than reusing an
   // earlier, now-canceled row), so this must always resolve to the CURRENT one, not whichever
@@ -293,8 +399,15 @@ export async function changeSubscriptionPlan({
     const { priceId } = await ensurePlanPriceId(plan, cadence);
 
     const stripeSub = await stripe.subscriptions.retrieve(currentSub.stripeSubscriptionId);
-    const item = stripeSub.items.data[0];
-    if (!item) throw new Error(`Subscription ${currentSub.stripeSubscriptionId} has no line item to swap`);
+    // Must target the BASE item specifically, not items.data[0] — if the account is currently
+    // on network, its subscription may already carry a second item (the per-location increment,
+    // see syncNetworkLocationQuantity), and array order isn't guaranteed. Identify the base item
+    // as "whichever item isn't the current plan's own extra-location price" (works whether
+    // switching away from network, where that item still exists momentarily, or between
+    // premium/free-of-that-concept plans, where it never existed at all).
+    const oldPlan = await getPricingPlanByKey(account.planKey);
+    const item = stripeSub.items.data.find((i) => i.price.id !== oldPlan.stripeExtraLocationPriceId);
+    if (!item) throw new Error(`Subscription ${currentSub.stripeSubscriptionId} has no base line item to swap`);
 
     const updated = await stripe.subscriptions.update(currentSub.stripeSubscriptionId, {
       items: [{ id: item.id, price: priceId }],
@@ -311,12 +424,45 @@ export async function changeSubscriptionPlan({
     await db
       .update(subscriptions)
       .set({
-        amountCents: updated.items.data[0]?.price?.unit_amount ?? 0,
+        amountCents: updated.items.data.find((i) => i.id === item.id)?.price?.unit_amount ?? 0,
         status: mapStripeSubscriptionStatus(updated.status),
         currentPeriodEnd: readCurrentPeriodEnd(updated),
         updatedAt: new Date(),
       })
       .where(eq(subscriptions.id, currentSub.id));
+
+    // Whichever direction this switch goes (into or out of network), the per-location item
+    // needs to reflect the new plan's reality — into network: add/update it for the account's
+    // real current location count; out of network: syncNetworkLocationQuantity itself no-ops
+    // for a non-network account, so any leftover item from before this switch needs its own
+    // cleanup here specifically (the function guards on account.planKey === "network", which is
+    // already updated above by the time this runs, so a premium/free account's stale
+    // extra-location item — if any — must be removed directly, not left to a function that will
+    // correctly refuse to touch it).
+    if (newPlanKey === "network") {
+      try {
+        await syncNetworkLocationQuantity(accountId);
+      } catch (err) {
+        console.error(
+          `[changeSubscriptionPlan] failed to sync network location quantity for account ${accountId} after switching to network`,
+          err
+        );
+      }
+    } else {
+      const staleExtraItem = updated.items.data.find(
+        (i) => i.price.id === oldPlan.stripeExtraLocationPriceId
+      );
+      if (staleExtraItem) {
+        try {
+          await stripe.subscriptionItems.del(staleExtraItem.id);
+        } catch (err) {
+          console.error(
+            `[changeSubscriptionPlan] failed to remove stale per-location item for account ${accountId} after switching off network`,
+            err
+          );
+        }
+      }
+    }
 
     return { planKey: newPlanKey };
   }
@@ -350,6 +496,16 @@ export async function changeSubscriptionPlan({
       cadence,
       paymentMethodId,
     });
+    if (newPlanKey === "network") {
+      try {
+        await syncNetworkLocationQuantity(accountId);
+      } catch (err) {
+        console.error(
+          `[changeSubscriptionPlan] failed to sync network location quantity for account ${accountId} after Free -> Network`,
+          err
+        );
+      }
+    }
     return { planKey: newPlanKey };
   }
 

@@ -6,6 +6,7 @@ import { accounts, locations } from "@/lib/db/schema";
 import { requireSession, requireActiveAccount, authErrorResponse } from "@/lib/auth/rbac";
 import { locationSchema } from "@/lib/validation";
 import { getPricingPlanByKey } from "@/lib/stripe/pricing";
+import { syncNetworkLocationQuantity } from "@/lib/stripe/subscription";
 
 // GET /api/locations — list the session account's locations (used by the claim wizard's
 // location-picker step and later dashboard screens).
@@ -80,6 +81,20 @@ export async function POST(request: Request) {
         language: parsed.data.language,
       })
       .returning();
+
+    // Network tier's "+$10/mo per location beyond the first" (revision.md §2.1/§2.3) — keeps
+    // the real Stripe subscription's per-location item in sync with the new location count.
+    // A no-op for every plan except network (see syncNetworkLocationQuantity's own doc
+    // comment); never allowed to fail the location creation itself, same "Stripe sync must not
+    // block the primary user action" pattern used at signup (app/api/auth/signup/route.ts).
+    try {
+      await syncNetworkLocationQuantity(session.user.accountId);
+    } catch (err) {
+      console.error(
+        `[locations] Stripe location-quantity sync failed for account ${session.user.accountId} — location created locally, billing sync should be investigated/retried.`,
+        err
+      );
+    }
 
     return NextResponse.json({ location }, { status: 201 });
   } catch (err) {

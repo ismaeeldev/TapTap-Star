@@ -22,6 +22,13 @@
       "when": 1788238004521,
       "tag": "0002_pricing_tiers",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788277652822,
+      "tag": "0003_network_per_location",
+      "breakpoints": true
     }
   ]
 }

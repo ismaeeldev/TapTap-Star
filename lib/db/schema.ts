@@ -274,6 +274,16 @@ export const pricingPlans = pgTable(
     trialDays: integer("trial_days"),
     stripePriceId: text("stripe_price_id"),
     stripeAnnualPriceId: text("stripe_annual_price_id"),
+    // Network tier's client-confirmed "+$10/mo per location beyond the first" (revision.md
+    // §2.1/§2.3) — null for every other plan (flat pricing, no per-unit component). Billed as a
+    // SEPARATE Stripe subscription item (quantity = locationCount - 1) alongside the base
+    // priceCents item, not folded into one tiered Price — mirrors the existing agency
+    // managedBusinessCount pattern (lib/stripe/pricing.ts's getAgencyManagedBusinessCount +
+    // syncAgencySubscriptionQuantity), the one proven "quantity-based Stripe item" precedent
+    // already in this codebase, rather than introducing a second, different mechanism
+    // (Stripe's native tiered/graduated pricing) for the same kind of problem.
+    perExtraLocationCents: integer("per_extra_location_cents"),
+    stripeExtraLocationPriceId: text("stripe_extra_location_price_id"),
     isActive: boolean("is_active").notNull().default(true),
     updatedByUserId: uuid("updated_by_user_id").references(() => users.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

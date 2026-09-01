@@ -127,12 +127,13 @@ are called out so they don't get silently skipped:
       live — this needs a Google-reviews-import feature that doesn't exist yet before any
       "draft a reply" UI is meaningful. Treated as its own follow-up project (see §3.5),
       not bundled into the initial pricing-tier rollout.
-- [ ] How does Network tier's own per-location price (+$10/location) interact with the
-      *existing* agency-only `managedBusinessCount` multiplier? (e.g., does an agency on
-      Network pay $60 + $10×extra-locations × managed-business-count, or is agency
-      billing kept as a separate, parallel model from the new per-location Network
-      pricing?) Needs a decision before Network-tier Stripe wiring for agency accounts
-      specifically.
+- [x] **Done** — Network's "+$10/mo per location beyond the first" is now real (see §6's
+      change log). Not reachable by agency accounts at all — the plan switcher
+      (`app/api/billing/change-plan/route.ts`) explicitly blocks agency accounts from
+      ever switching to a per-tier plan; agencies stay on the legacy "default" plan and
+      their existing `managedBusinessCount` multiplier, entirely untouched by this. The
+      "how do these two interact" question this item originally asked is moot by
+      construction — they never co-occur on the same account.
 
 ---
 
@@ -196,8 +197,7 @@ are called out so they don't get silently skipped:
 Same discipline as every round so far — one step at a time, each verified with a real
 browser test before moving to the next, committed and pushed individually:
 
-1. ✅ **Done** — Schema + seed: 3 real pricing plan rows (commit `9974e1d`). Network
-   shipped flat ($60/mo) for now — the per-location increment is deferred, see §2.3/§3.1.
+1. ✅ **Done** — Schema + seed: 3 real pricing plan rows (commit `9974e1d`).
 2. ✅ **Done** — Stripe: real Price objects + trial period wiring (commit `ec7585a`).
    Verified against real Stripe test mode.
 3. ✅ **Done** — Marketing pricing page: 3-tier UI at `/pricing` (commit `174b557`).
@@ -210,10 +210,17 @@ browser test before moving to the next, committed and pushed individually:
    Free blocks at 1, Network stays unlimited, legacy default-plan accounts unaffected.
 7. ⏳ **Not started, separate/later** — AI review-response feature — only after its own
    scoping questions are answered (§2.3).
+8. ✅ **Done** — Network's "+$10/mo per location beyond the first" (commit pending),
+   the one deferred piece from step 1, now fully wired and verified — see §6's change
+   log. Also fixed a real edge case found while verifying this: downgrading from
+   Network to a capped tier (Premium/Free) while over that tier's location limit is
+   now blocked with a clear error, instead of silently letting the account keep
+   locations its new plan shouldn't allow.
 
-**All 6 core pricing-restructure steps are now complete.** Only step 7 (AI draft-reply,
-deliberately scoped as a separate follow-up project) and the small open items in §2.3
-remain.
+**All 6 core pricing-restructure steps, plus the Network per-location pricing
+follow-up, are now complete.** Only step 7 (AI draft-reply, deliberately scoped as a
+separate follow-up project) and the Free-tier device-cap number (§2.3) remain — both
+need a decision from the client, not more building.
 
 Each of the above is its own commit, its own live Playwright verification, its own
 push to both `origin` and `me-origin`, matching the established pattern for this project.
@@ -249,9 +256,38 @@ push to both `origin` and `me-origin`, matching the established pattern for this
   not copy-pasted from an unambiguous source.
 - Two small scoped items remain open (§2.3) but don't block starting implementation —
   they'll be resolved alongside building, not before.
+- **[Steps 1-6 built and verified]** Schema, Stripe wiring, the new 3-tier marketing
+  page, signup with tier selection + card collection, the dashboard plan switcher, and
+  location-cap enforcement — all built, tested against real Stripe test mode, committed
+  individually, and pushed to both remotes.
+- **[Network per-location pricing completed]** The one deliberately-deferred piece from
+  step 1 (Network's "+$10/mo per extra location") is now real: two new nullable
+  columns (`perExtraLocationCents`, `stripeExtraLocationPriceId`) on `pricing_plans`,
+  a new `syncNetworkLocationQuantity()` that adds/updates/removes a second Stripe
+  subscription item as locations are added or deleted (called from both
+  `app/api/locations/route.ts`'s POST and `[id]/route.ts`'s DELETE), and
+  `changeSubscriptionPlan`'s paid↔paid transition fixed to correctly identify the base
+  line item (not assume `items.data[0]`) when a second item might already exist.
+  Verified end-to-end against real Stripe: adding locations correctly grows the
+  per-location item's quantity and the local `amountCents` ($60→$70→$80 for 1→2→3
+  locations), deleting back down to 1 location correctly removes the per-location item
+  entirely rather than leaving it at quantity 0.
+  - **Bug found and fixed during this verification**: switching from Network down to a
+    capped tier (Premium/Free) while over that tier's location limit previously
+    succeeded silently, leaving the account with more locations than its new plan
+    should allow. Now blocked with a clear "you have N locations, but X only allows N"
+    error — the same location-cap enforcement `app/api/locations/route.ts` already
+    applies to new locations, now also applied at plan-switch time.
+  - **Second bug found and fixed in the same pass**: the new error was initially thrown
+    as a plain `Error`, which `authErrorResponse` silently flattens to a generic
+    "Something went wrong" 500 for anything that isn't an `AuthError` — the real,
+    actionable message would never have reached the user. Fixed by throwing
+    `AuthError` instead, confirmed via a live test that the real message now reaches
+    a toast in the browser.
 
 ---
 
-*This document is updated as decisions come in and work progresses. Implementation has
-not started yet — this is still the plan, not a build log, until Section 4's steps begin
-getting checked off.*
+*This document is updated as decisions come in and work progresses. All core
+pricing-restructure work (steps 1-6 plus the Network per-location follow-up) is built,
+verified, and live. Remaining: step 7 (AI draft-reply — needs its own scoping pass) and
+the Free-tier device-cap number — both waiting on the client, not on more building.*

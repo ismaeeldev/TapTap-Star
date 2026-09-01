@@ -126,6 +126,52 @@ export async function getAgencyManagedBusinessCount(agencyAccountId: string): Pr
 }
 
 /**
+ * Network tier's client-confirmed "+$10/mo per location beyond the first" (revision.md
+ * §2.1/§2.3), completed as a real follow-up after the initial 6-step pricing rollout. Same
+ * lazy-bootstrap-and-verify-cached-id mechanism as ensurePlanPriceId, but for the ONE plan
+ * (network) that has a per-location increment at all — every other plan's
+ * perExtraLocationCents is null, so this throws immediately for them rather than silently
+ * creating a pointless Price.
+ */
+export async function ensureExtraLocationPriceId(plan: PricingPlan): Promise<string> {
+  if (plan.perExtraLocationCents === null || plan.perExtraLocationCents === undefined) {
+    throw new Error(`Plan '${plan.planKey}' has no per-extra-location price — nothing to ensure`);
+  }
+
+  if (plan.stripeExtraLocationPriceId) {
+    try {
+      await stripe.prices.retrieve(plan.stripeExtraLocationPriceId);
+      return plan.stripeExtraLocationPriceId;
+    } catch (err) {
+      console.error(
+        `[pricing] cached stripeExtraLocationPriceId ${plan.stripeExtraLocationPriceId} for plan '${plan.planKey}' no longer exists in Stripe — recreating it`,
+        err
+      );
+    }
+  }
+
+  const productId = process.env.STRIPE_PRODUCT_ID;
+  if (!productId) {
+    throw new Error("STRIPE_PRODUCT_ID is not set — required to create a Stripe Price");
+  }
+
+  const price = await stripe.prices.create({
+    product: productId,
+    unit_amount: plan.perExtraLocationCents,
+    currency: plan.currency,
+    recurring: { interval: "month" },
+    nickname: `${plan.planKey} (extra location)`,
+  });
+
+  await db
+    .update(pricingPlans)
+    .set({ stripeExtraLocationPriceId: price.id, updatedAt: new Date() })
+    .where(eq(pricingPlans.id, plan.id));
+
+  return price.id;
+}
+
+/**
  * The ONE pricing calculation function (`03_DATA_MODEL_AND_ARCHITECTURE.md` §6 pseudocode,
  * implemented exactly) — replaces the old, now-obsolete `getBillableQuantity()`/devices-count
  * design entirely. Branches on `account.type`:
