@@ -204,7 +204,8 @@ browser test before moving to the next, committed and pushed individually:
    Verified light/dark/mobile, zero regressions on homepage/FAQ.
 4. ✅ **Done** — Signup: plan selection + real card collection via Stripe Elements
    (commit pending). Verified all 3 tiers end-to-end against real Stripe test mode.
-5. ⏳ **Not started** — Dashboard billing: plan switcher (upgrade/downgrade anytime).
+5. ✅ **Done** — Dashboard billing: plan switcher (upgrade/downgrade anytime, commit
+   pending). Verified all 3 transition types against real Stripe test mode.
 6. ⏳ **Not started** — Location cap enforcement for capped tiers.
 7. ⏳ **Not started, separate/later** — AI review-response feature — only after its own
    scoping questions are answered (§2.3).

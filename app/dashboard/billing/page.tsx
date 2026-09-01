@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth/auth";
 import { getBillingOverview } from "@/lib/queries/billing";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { BillingPortalButton } from "@/components/dashboard/billing-portal-button";
+import { PlanSwitcher } from "@/components/billing/plan-switcher";
 import { CreditCard } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
 
@@ -25,7 +26,7 @@ export default async function BillingPage() {
         <p className="text-body-sm text-text-muted">
           {isAgency
             ? "Your flat monthly rate applied across every business you manage."
-            : "Your flat monthly subscription — unlimited devices, locations, and employees."}
+            : "Your subscription and plan — switch plans anytime."}
         </p>
       </div>
 
@@ -50,17 +51,15 @@ export default async function BillingPage() {
               Current plan
             </p>
             <p className="text-h3 font-display font-semibold text-text-primary">
-              {dollars(overview.amountCents)}
-              <span className="text-body-sm font-normal text-text-muted">/month</span>
+              {overview.planName}{" "}
+              <span className="text-body-sm font-normal text-text-muted">
+                — {dollars(overview.amountCents)}/month
+              </span>
             </p>
-            {isAgency ? (
+            {isAgency && (
               <p className="text-body-sm text-text-muted">
                 {dollars(overview.planPriceCents)}/month × {overview.managedBusinessCount ?? 0}{" "}
                 managed business{overview.managedBusinessCount === 1 ? "" : "es"}
-              </p>
-            ) : (
-              <p className="text-body-sm text-text-muted">
-                Unlimited devices, locations, and employees
               </p>
             )}
           </div>
@@ -76,13 +75,23 @@ export default async function BillingPage() {
             </span>
           )}
         </div>
-        {!overview.hasStripeCustomer && (
+        {!overview.hasStripeCustomer && overview.planKey !== "free" && (
           <p className="mt-2 text-caption text-text-muted">
             Billing isn&apos;t fully set up on this account yet — no Stripe customer on file.
             Contact support if this persists.
           </p>
         )}
       </div>
+
+      {/* Modifications 5 pricing restructure (revision.md §3.4/step 5): plan-switching from the
+          dashboard, client-confirmed "anytime". Agency accounts use a different billing model
+          (managedBusinessCount × plan price, not a selectable tier) — see change-plan/route.ts's
+          own server-side block for why this is hidden here rather than shown-then-erroring. */}
+      {!isAgency && (
+        <div className="rounded-lg border border-border-default bg-bg-card p-5">
+          <PlanSwitcher currentPlanKey={overview.planKey} />
+        </div>
+      )}
 
       <div className="space-y-3">
         <h2 className="text-h4 font-semibold text-text-primary">Invoice history</h2>

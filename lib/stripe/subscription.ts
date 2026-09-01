@@ -1,7 +1,7 @@
 // Stripe customer/subscription lifecycle helpers — Step 8. Kept separate from pricing.ts
 // (pure calculation) so the actual Stripe API calls + local `subscriptions` row writes live in
 // one place, reused by signup and the agency quantity-sync trigger.
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import type Stripe from "stripe";
 import { db } from "@/lib/db/client";
 import { accounts, subscriptions } from "@/lib/db/schema";
@@ -121,6 +121,7 @@ export async function syncAgencySubscriptionQuantity(agencyAccountId: string): P
 
   const sub = await db.query.subscriptions.findFirst({
     where: eq(subscriptions.accountId, agencyAccountId),
+    orderBy: [desc(subscriptions.createdAt)],
   });
   if (!sub) return; // No local subscription row to sync (shouldn't happen once Stripe is set up).
 
@@ -238,6 +239,121 @@ export async function createStripeSubscriptionForPlan({
     status: mapStripeSubscriptionStatus(subscription.status),
     currentPeriodEnd: readCurrentPeriodEnd(subscription),
   });
+}
+
+/**
+ * Modifications 5 pricing restructure (revision.md §3.4/step 5) — plan switching from the
+ * dashboard billing page, client-confirmed "anytime", either direction. Three real transition
+ * shapes, each genuinely different at the Stripe level (not one generic "change plan" call):
+ *
+ *   1. Paid -> Paid (premium <-> network): a real Stripe subscription ITEM update — same
+ *      customer, same subscription, just a different Price. No new card needed.
+ *   2. Paid -> Free: cancels the real Stripe subscription immediately (client-confirmed:
+ *      "Cancel Stripe subscription immediately, take effect now" — not cancel_at_period_end).
+ *   3. Free -> Paid: requires a NEW payment method (Free never collected a card), so this is NOT
+ *      a one-click switch — the caller must first collect a card (reusing
+ *      components/billing/stripe-card-form.tsx) and pass paymentMethodId; this function then
+ *      creates a brand-new Stripe customer + subscription, same as signup's
+ *      createStripeSubscriptionForPlan (a genuinely new customer, since the account never had
+ *      one).
+ *
+ * Returns the new accounts.planKey on success, primarily so the caller can render an accurate
+ * confirmation without a second DB read.
+ */
+export async function changeSubscriptionPlan({
+  accountId,
+  newPlanKey,
+  cadence,
+  paymentMethodId,
+}: {
+  accountId: string;
+  newPlanKey: "free" | "premium" | "network";
+  cadence: "monthly" | "annual";
+  paymentMethodId?: string;
+}): Promise<{ planKey: string }> {
+  const account = await db.query.accounts.findFirst({ where: eq(accounts.id, accountId) });
+  if (!account) throw new Error(`Account ${accountId} not found`);
+
+  // Ordered by createdAt desc — an account can now have more than one subscriptions row over
+  // its lifetime (a Free->paid switch below creates a brand-new one rather than reusing an
+  // earlier, now-canceled row), so this must always resolve to the CURRENT one, not whichever
+  // row the DB happens to return first (a real bug caught while verifying this function).
+  const currentSub = await db.query.subscriptions.findFirst({
+    where: eq(subscriptions.accountId, accountId),
+    orderBy: [desc(subscriptions.createdAt)],
+  });
+
+  // --- Transition 1: Paid -> Paid (subscription item price swap) ---
+  if (
+    (newPlanKey === "premium" || newPlanKey === "network") &&
+    currentSub?.stripeSubscriptionId &&
+    (account.planKey === "premium" || account.planKey === "network")
+  ) {
+    const plan = await getPricingPlanByKey(newPlanKey);
+    const { priceId } = await ensurePlanPriceId(plan, cadence);
+
+    const stripeSub = await stripe.subscriptions.retrieve(currentSub.stripeSubscriptionId);
+    const item = stripeSub.items.data[0];
+    if (!item) throw new Error(`Subscription ${currentSub.stripeSubscriptionId} has no line item to swap`);
+
+    const updated = await stripe.subscriptions.update(currentSub.stripeSubscriptionId, {
+      items: [{ id: item.id, price: priceId }],
+      // Prorate the difference on the next invoice rather than charging/crediting immediately —
+      // Stripe's default and the standard "switch plans anytime" UX (no surprise immediate
+      // charge just for switching).
+      proration_behavior: "create_prorations",
+    });
+
+    await db
+      .update(accounts)
+      .set({ planKey: newPlanKey, updatedAt: new Date() })
+      .where(eq(accounts.id, accountId));
+    await db
+      .update(subscriptions)
+      .set({
+        amountCents: updated.items.data[0]?.price?.unit_amount ?? 0,
+        status: mapStripeSubscriptionStatus(updated.status),
+        currentPeriodEnd: readCurrentPeriodEnd(updated),
+        updatedAt: new Date(),
+      })
+      .where(eq(subscriptions.id, currentSub.id));
+
+    return { planKey: newPlanKey };
+  }
+
+  // --- Transition 2: Paid -> Free (immediate cancellation) ---
+  if (newPlanKey === "free") {
+    if (currentSub?.stripeSubscriptionId) {
+      await stripe.subscriptions.cancel(currentSub.stripeSubscriptionId);
+      await db
+        .update(subscriptions)
+        .set({ status: "canceled", updatedAt: new Date() })
+        .where(eq(subscriptions.id, currentSub.id));
+    }
+    await db
+      .update(accounts)
+      .set({ planKey: "free", status: "active", updatedAt: new Date() })
+      .where(eq(accounts.id, accountId));
+    return { planKey: "free" };
+  }
+
+  // --- Transition 3: Free -> Paid (new customer + subscription, needs a fresh card) ---
+  if (newPlanKey === "premium" || newPlanKey === "network") {
+    if (!paymentMethodId) {
+      throw new Error("A payment method is required to switch from Free to a paid plan");
+    }
+    await createStripeSubscriptionForPlan({
+      accountId,
+      billingEmail: account.billingEmail,
+      name: account.name,
+      planKey: newPlanKey,
+      cadence,
+      paymentMethodId,
+    });
+    return { planKey: newPlanKey };
+  }
+
+  throw new Error(`Unhandled plan transition: ${account.planKey} -> ${newPlanKey}`);
 }
 
 export { mapStripeSubscriptionStatus, readCurrentPeriodEnd };

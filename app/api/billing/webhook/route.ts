@@ -11,7 +11,7 @@
 // against real Stripe events once that's done. STRIPE_WEBHOOK_SECRET in .env.local is currently
 // a THROWAWAY local-testing value (see the generateTestHeaderString testing note), not a real one.
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import type Stripe from "stripe";
 import { db } from "@/lib/db/client";
 import { accounts, invoices, subscriptions } from "@/lib/db/schema";
@@ -152,8 +152,15 @@ export async function POST(req: Request) {
           .set({ status: "suspended", updatedAt: new Date() })
           .where(eq(accounts.id, account.id));
 
+        // Ordered by createdAt desc — Modifications 5's Free<->paid plan switching means an
+        // account can have more than one subscriptions row (an older, already-canceled one
+        // plus a newer current one); must always resolve to the current row, not whichever the
+        // DB returns first. Also match by stripeSubscriptionId specifically, not just the
+        // newest row for this account — this event names the exact subscription that was
+        // deleted, so a stale event for an old (already-superseded) subscription must not mark
+        // the account's real current subscription as canceled by mistake.
         const localSub = await db.query.subscriptions.findFirst({
-          where: eq(subscriptions.accountId, account.id),
+          where: eq(subscriptions.stripeSubscriptionId, subscription.id),
         });
         if (localSub) {
           await db
@@ -173,14 +180,25 @@ export async function POST(req: Request) {
       case "invoice.upcoming": {
         // Safety-net sync (§8): move any subscription still on an old Stripe Price to the
         // current one, and (for agencies) defensively re-verify billable_quantity.
+        //
+        // Modifications 5 pricing restructure: this safety-net is specifically about the
+        // legacy single "default" plan's price ever drifting (an admin edits its price via
+        // /admin/billing-settings, and this re-syncs any subscription still on the old Price
+        // id). It must NOT run for accounts now on free/premium/network — forcing their
+        // subscription's price back to the "default" plan's price would actively corrupt a
+        // correctly-priced Premium/Network subscription. Scoped accordingly below.
         const invoice = event.data.object as Stripe.Invoice;
         const customerId = invoiceCustomerId(invoice);
         if (!customerId) break;
         const account = await findAccountByStripeCustomerId(customerId);
         if (!account) break;
+        if (account.planKey !== "default") break;
 
+        // Ordered by createdAt desc for the same reason as the customer.subscription.deleted
+        // handler above — an account can have more than one subscriptions row now.
         const localSub = await db.query.subscriptions.findFirst({
           where: eq(subscriptions.accountId, account.id),
+          orderBy: [desc(subscriptions.createdAt)],
         });
         if (!localSub?.stripeSubscriptionId) break;
 

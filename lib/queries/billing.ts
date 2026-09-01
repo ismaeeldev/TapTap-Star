@@ -2,11 +2,13 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { accounts, invoices, subscriptions } from "@/lib/db/schema";
-import { getDefaultPricingPlan, getAgencyManagedBusinessCount } from "@/lib/stripe/pricing";
+import { getAgencyManagedBusinessCount, getPricingPlanByKey } from "@/lib/stripe/pricing";
 
 export type BillingOverview = {
   accountType: "business" | "agency";
   accountStatus: "active" | "grace_period" | "suspended";
+  planKey: string;
+  planName: string;
   planPriceCents: number;
   managedBusinessCount: number | null; // agency accounts only
   amountCents: number; // what this account is actually billed
@@ -30,13 +32,28 @@ export async function getBillingOverview(accountId: string): Promise<BillingOver
   const account = await db.query.accounts.findFirst({ where: eq(accounts.id, accountId) });
   if (!account) return null;
 
-  const plan = await getDefaultPricingPlan();
+  // Modifications 5 pricing restructure (revision.md §3.4/step 5) — reads the account's OWN
+  // plan (accounts.planKey), not the hardcoded "default" plan this function used to always read
+  // regardless of which tier an account was actually on. That was a real, silently-wrong bug
+  // discovered while building step 5: every free/premium/network account created since step 4
+  // would have shown the OLD $29.90 "default" plan's price here instead of its real one.
+  const plan = await getPricingPlanByKey(account.planKey);
   const managedBusinessCount =
     account.type === "agency" ? await getAgencyManagedBusinessCount(accountId) : null;
   const amountCents =
     account.type === "agency" ? (managedBusinessCount ?? 0) * plan.priceCents : plan.priceCents;
 
-  const sub = await db.query.subscriptions.findFirst({ where: eq(subscriptions.accountId, accountId) });
+  // Modifications 5 pricing restructure: an account can accumulate more than one
+  // subscriptions row over its lifetime now (a Free->paid switch creates a brand-new Stripe
+  // customer+subscription — see changeSubscriptionPlan()'s doc comment — rather than reusing
+  // the account's earlier, now-canceled one). Explicitly ordered by createdAt desc so this
+  // always reads the CURRENT subscription, not whichever row the DB happens to return first —
+  // a real bug caught while verifying step 5: without this ordering, the billing page could
+  // show a stale canceled subscription's data instead of the real active one.
+  const sub = await db.query.subscriptions.findFirst({
+    where: eq(subscriptions.accountId, accountId),
+    orderBy: [desc(subscriptions.createdAt)],
+  });
   const invoiceRows = await db.query.invoices.findMany({
     where: eq(invoices.accountId, accountId),
     orderBy: [desc(invoices.createdAt)],
@@ -46,6 +63,8 @@ export async function getBillingOverview(accountId: string): Promise<BillingOver
   return {
     accountType: account.type === "agency" ? "agency" : "business",
     accountStatus: account.status,
+    planKey: account.planKey,
+    planName: plan.name,
     planPriceCents: plan.priceCents,
     managedBusinessCount,
     amountCents,

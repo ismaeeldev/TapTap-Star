@@ -58,6 +58,17 @@ export const changePasswordSchema = z.object({
 });
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 
+// Modifications 5 pricing restructure (revision.md §3.4/step 5) — dashboard billing
+// plan-switcher (upgrade/downgrade anytime, client-confirmed). paymentMethodId is only required
+// for a Free -> paid transition, enforced in the route handler (same pattern as signup's
+// planKey/paymentMethodId — see that schema's own comment) since Free never has a card on file.
+export const changePlanSchema = z.object({
+  newPlanKey: z.enum(["free", "premium", "network"]),
+  cadence: z.enum(["monthly", "annual"]).default("monthly"),
+  paymentMethodId: z.string().trim().min(1).optional(),
+});
+export type ChangePlanInput = z.infer<typeof changePlanSchema>;
+
 // --- Step 4: locations / employees / device activation ---
 
 export const locationSchema = z.object({
