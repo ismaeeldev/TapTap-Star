@@ -198,8 +198,9 @@ browser test before moving to the next, committed and pushed individually:
 
 1. ✅ **Done** — Schema + seed: 3 real pricing plan rows (commit `9974e1d`). Network
    shipped flat ($60/mo) for now — the per-location increment is deferred, see §2.3/§3.1.
-2. ⏳ **In progress** — Stripe: real Price objects + trial period wiring.
-3. Marketing pricing page: 3-tier UI.
+2. ✅ **Done** — Stripe: real Price objects + trial period wiring (commit `ec7585a`).
+   Verified against real Stripe test mode.
+3. ⏳ **In progress** — Marketing pricing page: 3-tier UI.
 4. Signup: plan selection.
 5. Dashboard billing: plan switcher.
 6. Location cap enforcement for capped tiers.

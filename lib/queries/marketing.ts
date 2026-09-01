@@ -39,4 +39,45 @@ export async function getPublicPricingPlan() {
   }
 }
 
+// Modifications 5 pricing restructure (revision.md §3.3) — the new 3-tier marketing pricing
+// page. Deliberately a separate function from getPublicPricingPlan() above rather than a
+// rewrite of it: the homepage pricing section and FAQ page still read the single "default"
+// plan (their own rewrite to the 3-tier model is a separate follow-up, not bundled into this
+// step — see revision.md's change log), so getPublicPricingPlan() must keep working unchanged.
+type PublicTier = {
+  planKey: string;
+  name: string;
+  priceCents: number;
+  annualPriceCents: number | null;
+  locationLimit: number | null;
+  trialDays: number | null;
+};
+
+const FALLBACK_TIERS: PublicTier[] = [
+  { planKey: "free", name: "Free", priceCents: 0, annualPriceCents: null, locationLimit: 1, trialDays: null },
+  { planKey: "premium", name: "Premium", priceCents: 2500, annualPriceCents: 24000, locationLimit: 1, trialDays: 14 },
+  { planKey: "network", name: "Network", priceCents: 6000, annualPriceCents: 57600, locationLimit: null, trialDays: 14 },
+];
+
+export async function getPublicPricingTiers(): Promise<PublicTier[]> {
+  const planKeys = ["free", "premium", "network"] as const;
+  try {
+    const rows = await db.query.pricingPlans.findMany({
+      where: (p, { inArray }) => inArray(p.planKey, planKeys),
+    });
+    if (rows.length !== planKeys.length) {
+      console.error(
+        `[getPublicPricingTiers] expected ${planKeys.length} tiers, found ${rows.length} — using fallback`
+      );
+      return FALLBACK_TIERS;
+    }
+    // Return in a fixed, deliberate order (Free, Premium, Network) — DB row order is not
+    // guaranteed, and the page's layout depends on this exact left-to-right order.
+    return planKeys.map((key) => rows.find((r) => r.planKey === key)!);
+  } catch (err) {
+    console.error("[getPublicPricingTiers] DB read failed, using fallback:", err);
+    return FALLBACK_TIERS;
+  }
+}
+
 export { formatPriceCents } from "@/lib/format";
