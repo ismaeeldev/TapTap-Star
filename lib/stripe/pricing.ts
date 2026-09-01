@@ -6,13 +6,21 @@ import { db } from "@/lib/db/client";
 import { accounts, pricingPlans, type PricingPlan } from "@/lib/db/schema";
 import { stripe } from "@/lib/stripe/client";
 
-/** The single `default` pricing_plans row — v1 only ever has this one row (§8). */
+/** The single `default` pricing_plans row — the original v1 single-tier plan. Still read by
+ * every account created before the Modifications 5 pricing restructure (see revision.md) —
+ * kept working unchanged, not migrated automatically (that's a deliberate later decision). */
 export async function getDefaultPricingPlan(): Promise<PricingPlan> {
+  return getPricingPlanByKey("default");
+}
+
+/** Any pricing_plans row by its plan_key — generalizes getDefaultPricingPlan() for the
+ * Modifications 5 multi-tier rollout (free/premium/network), see revision.md §3.1/§3.2. */
+export async function getPricingPlanByKey(planKey: string): Promise<PricingPlan> {
   const plan = await db.query.pricingPlans.findFirst({
-    where: eq(pricingPlans.planKey, "default"),
+    where: eq(pricingPlans.planKey, planKey),
   });
   if (!plan) {
-    throw new Error("Default pricing plan not found — the Step 2 seed should have created it");
+    throw new Error(`Pricing plan '${planKey}' not found`);
   }
   return plan;
 }
@@ -37,14 +45,45 @@ export async function getDefaultPricingPlan(): Promise<PricingPlan> {
  * page load.
  */
 export async function ensureDefaultPlanPriceId(): Promise<{ plan: PricingPlan; priceId: string }> {
-  const plan = await getDefaultPricingPlan();
-  if (plan.stripePriceId) {
+  return ensurePlanPriceId(await getDefaultPricingPlan(), "monthly");
+}
+
+/**
+ * Generalizes ensureDefaultPlanPriceId() for the Modifications 5 multi-tier rollout — any
+ * plan row, either billing cadence (monthly reads/writes stripePriceId + priceCents, annual
+ * reads/writes stripeAnnualPriceId + annualPriceCents). Same lazy-bootstrap-and-verify
+ * mechanism: create the Stripe Price on first use if missing, and re-create it if a cached id
+ * no longer resolves in Stripe (see this function's sibling's doc comment above for why that
+ * check exists — a real incident, not speculative).
+ *
+ * A $0 plan (Free tier) never needs a Stripe Price at all — Free never creates a Stripe
+ * subscription in the first place (see revision.md §3.2), so this throws rather than silently
+ * creating a pointless $0 Stripe Price object if ever called for one by mistake.
+ */
+export async function ensurePlanPriceId(
+  plan: PricingPlan,
+  cadence: "monthly" | "annual"
+): Promise<{ plan: PricingPlan; priceId: string }> {
+  const amountCents = cadence === "annual" ? plan.annualPriceCents : plan.priceCents;
+  if (amountCents === null || amountCents === undefined) {
+    throw new Error(
+      `Plan '${plan.planKey}' has no ${cadence} price set — cannot create a Stripe Price for it`
+    );
+  }
+  if (amountCents === 0) {
+    throw new Error(
+      `Plan '${plan.planKey}' is $0 (${cadence}) — Free-tier plans never need a Stripe Price, they don't create a subscription at all`
+    );
+  }
+
+  const cachedId = cadence === "annual" ? plan.stripeAnnualPriceId : plan.stripePriceId;
+  if (cachedId) {
     try {
-      await stripe.prices.retrieve(plan.stripePriceId);
-      return { plan, priceId: plan.stripePriceId };
+      await stripe.prices.retrieve(cachedId);
+      return { plan, priceId: cachedId };
     } catch (err) {
       console.error(
-        `[pricing] cached stripePriceId ${plan.stripePriceId} no longer exists in Stripe — recreating it instead of failing every signup`,
+        `[pricing] cached ${cadence} stripePriceId ${cachedId} for plan '${plan.planKey}' no longer exists in Stripe — recreating it instead of failing every use`,
         err
       );
     }
@@ -52,19 +91,26 @@ export async function ensureDefaultPlanPriceId(): Promise<{ plan: PricingPlan; p
 
   const productId = process.env.STRIPE_PRODUCT_ID;
   if (!productId) {
-    throw new Error("STRIPE_PRODUCT_ID is not set — required to create the initial Stripe Price");
+    throw new Error("STRIPE_PRODUCT_ID is not set — required to create a Stripe Price");
   }
 
   const price = await stripe.prices.create({
     product: productId,
-    unit_amount: plan.priceCents,
+    unit_amount: amountCents,
     currency: plan.currency,
-    recurring: { interval: "month" },
+    recurring: { interval: cadence === "annual" ? "year" : "month" },
+    // Distinguishes tier + cadence in the Stripe dashboard — every existing Price for the
+    // "default" plan was created with no nickname at all, so this is additive, not a
+    // behavior change for that plan (ensureDefaultPlanPriceId still goes through this same
+    // function now, but "default" never passes through here with a nickname before — actually
+    // it will now too, harmless, just a dashboard label).
+    nickname: `${plan.planKey} (${cadence})`,
   });
 
+  const columnToUpdate = cadence === "annual" ? { stripeAnnualPriceId: price.id } : { stripePriceId: price.id };
   const [updated] = await db
     .update(pricingPlans)
-    .set({ stripePriceId: price.id, updatedAt: new Date() })
+    .set({ ...columnToUpdate, updatedAt: new Date() })
     .where(eq(pricingPlans.id, plan.id))
     .returning();
 

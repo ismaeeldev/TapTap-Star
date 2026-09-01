@@ -196,8 +196,9 @@ are called out so they don't get silently skipped:
 Same discipline as every round so far — one step at a time, each verified with a real
 browser test before moving to the next, committed and pushed individually:
 
-1. Schema + seed: 3 real pricing plan rows.
-2. Stripe: real Price objects + trial period wiring.
+1. ✅ **Done** — Schema + seed: 3 real pricing plan rows (commit `9974e1d`). Network
+   shipped flat ($60/mo) for now — the per-location increment is deferred, see §2.3/§3.1.
+2. ⏳ **In progress** — Stripe: real Price objects + trial period wiring.
 3. Marketing pricing page: 3-tier UI.
 4. Signup: plan selection.
 5. Dashboard billing: plan switcher.

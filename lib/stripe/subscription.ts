@@ -6,7 +6,13 @@ import type Stripe from "stripe";
 import { db } from "@/lib/db/client";
 import { accounts, subscriptions } from "@/lib/db/schema";
 import { stripe } from "@/lib/stripe/client";
-import { ensureDefaultPlanPriceId, getAgencyManagedBusinessCount, getDefaultPricingPlan } from "@/lib/stripe/pricing";
+import {
+  ensureDefaultPlanPriceId,
+  ensurePlanPriceId,
+  getAgencyManagedBusinessCount,
+  getDefaultPricingPlan,
+  getPricingPlanByKey,
+} from "@/lib/stripe/pricing";
 
 /** Maps Stripe's richer subscription.status set onto our narrower local enum
  * (active/past_due/canceled). `trialing`/`incomplete` count as active (no trial exists in v1,
@@ -152,6 +158,86 @@ export async function syncAgencySubscriptionQuantity(agencyAccountId: string): P
     .update(subscriptions)
     .set({ billableQuantity: quantity, amountCents, updatedAt: new Date() })
     .where(eq(subscriptions.id, sub.id));
+}
+
+/**
+ * Modifications 5 pricing restructure (revision.md §3.2) — creates a real Stripe Customer +
+ * Subscription for one of the new tiers (premium/network), WITH a card required upfront and a
+ * real trial period, per the client's explicit confirmation ("Yes, card since the beginning" —
+ * Billing.pdf). This is deliberately a NEW function, not a rewrite of
+ * createStripeCustomerAndSubscription() above: that function is still the live signup route's
+ * only caller today (payment_behavior: "default_incomplete", no card, no trial, "default" plan
+ * only) and must keep working completely unchanged until a later, dedicated step rewires signup
+ * itself to actually offer tier selection (revision.md §3.4) — merging that change into this
+ * one would make this step impossible to verify in isolation from the live signup flow.
+ *
+ * `paymentMethodId` must be a Stripe PaymentMethod id already attached to (or attachable to) the
+ * customer — collected via Stripe Elements/Checkout in whatever calls this (not built by this
+ * function; card collection UI is part of the later signup-rewrite step). The Free tier never
+ * calls this at all — it has no Stripe subscription, see revision.md §3.2.
+ */
+export async function createStripeSubscriptionForPlan({
+  accountId,
+  billingEmail,
+  name,
+  planKey,
+  cadence,
+  paymentMethodId,
+}: {
+  accountId: string;
+  billingEmail: string;
+  name: string;
+  planKey: "premium" | "network";
+  cadence: "monthly" | "annual";
+  paymentMethodId: string;
+}): Promise<void> {
+  const plan = await getPricingPlanByKey(planKey);
+  const { priceId } = await ensurePlanPriceId(plan, cadence);
+
+  const customer = await stripe.customers.create({
+    email: billingEmail,
+    name,
+    payment_method: paymentMethodId,
+    invoice_settings: { default_payment_method: paymentMethodId },
+    metadata: { accountId },
+  });
+
+  // Card required upfront (client-confirmed) — no payment_behavior: "default_incomplete" here,
+  // unlike createStripeCustomerAndSubscription() above. A real payment method is already
+  // attached as the customer's default, so Stripe activates the subscription immediately in
+  // `trialing` status (not `incomplete`) for the trial length below, then auto-charges that
+  // card when the trial ends — exactly the "card since the beginning" flow the client asked for.
+  const subscription = await stripe.subscriptions.create({
+    customer: customer.id,
+    items: [{ price: priceId, quantity: 1 }],
+    trial_period_days: plan.trialDays ?? undefined,
+    metadata: { accountId, planKey, cadence },
+  });
+
+  // accounts.status: "active" immediately, NOT the old signup flow's "grace_period" — that
+  // status models "no card on file yet, read-only until a first charge succeeds"
+  // (app/api/billing/webhook/route.ts's invoice.payment_succeeded handler is what flips it to
+  // active there). This flow has a real card attached from the start and a genuine trial — the
+  // customer should get full access for the whole trial, not be locked out until day 15's first
+  // real charge. Stripe's own subscription.status will correctly read "trialing" (see
+  // mapStripeSubscriptionStatus's doc comment on why the local `subscriptions.status` enum has
+  // no separate trialing value), and the existing invoice.payment_succeeded webhook still fires
+  // normally when the trial ends and the first real charge happens — this just avoids
+  // needlessly gating dashboard access during the trial itself.
+  await db
+    .update(accounts)
+    .set({ stripeCustomerId: customer.id, planKey, status: "active", updatedAt: new Date() })
+    .where(eq(accounts.id, accountId));
+
+  const item = subscription.items.data[0];
+  await db.insert(subscriptions).values({
+    accountId,
+    stripeSubscriptionId: subscription.id,
+    billableQuantity: 1,
+    amountCents: item?.price?.unit_amount ?? 0,
+    status: mapStripeSubscriptionStatus(subscription.status),
+    currentPeriodEnd: readCurrentPeriodEnd(subscription),
+  });
 }
 
 export { mapStripeSubscriptionStatus, readCurrentPeriodEnd };
