@@ -243,6 +243,10 @@ export const scans = pgTable(
 // pricing_plans
 // ---------------------------------------------------------------------------------------
 
+// Modifications 5 (page 2) pricing restructure — see revision.md for the full plan. This
+// table was already shaped to support multiple tiers (planKey/billingUnit/appliesTo are
+// all per-row) even though v1 only ever seeded one "default" row; these new columns extend
+// it for the 3-tier Free/Premium/Network rollout rather than requiring a rewrite.
 export const pricingPlans = pgTable(
   "pricing_plans",
   {
@@ -250,10 +254,26 @@ export const pricingPlans = pgTable(
     planKey: text("plan_key").notNull(),
     name: text("name").notNull(),
     priceCents: integer("price_cents").notNull(),
+    // 20% annual discount (client-confirmed, revision.md §2.1) — null for the Free tier
+    // (nothing to discount) and for any plan that hasn't set up annual billing yet.
+    // Deliberately one extra column on the same row rather than a second pricing_plans row
+    // per cadence — keeps every existing "one row per plan_key" query/read in this codebase
+    // (getDefaultPricingPlan, billing overview, etc.) working unchanged; annual is just an
+    // alternate price on the same tier, not a different tier.
+    annualPriceCents: integer("annual_price_cents"),
     currency: text("currency").notNull().default("usd"),
     billingUnit: billingUnitEnum("billing_unit").notNull().default("flat"),
     appliesTo: planAppliesToEnum("applies_to").notNull().default("business"),
+    // Max locations this plan allows; null = unlimited (Network tier). Enforced in
+    // app/api/locations/route.ts's POST handler (added in the same pricing-restructure
+    // pass) — see revision.md §3.4.
+    locationLimit: integer("location_limit"),
+    // Free trial length in days for this plan; null/0 = no trial (the Free tier itself, and
+    // the initial "default" legacy row, which predates trials entirely). Read by
+    // lib/stripe/subscription.ts when creating a Stripe subscription — see revision.md §3.2.
+    trialDays: integer("trial_days"),
     stripePriceId: text("stripe_price_id"),
+    stripeAnnualPriceId: text("stripe_annual_price_id"),
     isActive: boolean("is_active").notNull().default(true),
     updatedByUserId: uuid("updated_by_user_id").references(() => users.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
