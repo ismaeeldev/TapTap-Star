@@ -12,6 +12,8 @@
     "@hookform/resolvers": "^5.9.1",
     "@neondatabase/serverless": "^1.1.0",
     "@react-email/components": "^1.0.12",
+    "@stripe/react-stripe-js": "^6.8.2",
+    "@stripe/stripe-js": "^9.15.0",
     "@upstash/redis": "^1.38.2",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",

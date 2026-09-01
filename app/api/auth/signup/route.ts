@@ -6,7 +6,10 @@ import { db } from "@/lib/db/client";
 import { accounts, users, emailVerificationTokens } from "@/lib/db/schema";
 import { signupSchema } from "@/lib/validation";
 import { notify } from "@/lib/email/notify";
-import { createStripeCustomerAndSubscription } from "@/lib/stripe/subscription";
+import {
+  createStripeCustomerAndSubscription,
+  createStripeSubscriptionForPlan,
+} from "@/lib/stripe/subscription";
 
 const VERIFY_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 
@@ -25,7 +28,18 @@ export async function POST(req: Request) {
       { status: 400 }
     );
   }
-  const { name, email, password } = parsed.data;
+  const { name, email, password, planKey, cadence, paymentMethodId } = parsed.data;
+
+  // Modifications 5 pricing restructure (revision.md §3.4): a paid tier (premium/network)
+  // requires a real payment method — client-confirmed ("Yes, card since the beginning"). Not a
+  // zod-level requirement (see the schema's own comment) so this produces a clear field-specific
+  // error instead of a generic 400 from a failed schema shape.
+  if ((planKey === "premium" || planKey === "network") && !paymentMethodId) {
+    return NextResponse.json(
+      { message: "A payment method is required for this plan", fieldErrors: { paymentMethodId: ["Payment method is required"] } },
+      { status: 400 }
+    );
+  }
 
   const existing = await db.query.users.findFirst({ where: eq(users.email, email) });
   if (existing) {
@@ -43,20 +57,26 @@ export async function POST(req: Request) {
   // selector at signup, per 00_SCOPE_DOCUMENT.md §5.9 (agency status is requested later from
   // /dashboard/settings, Step 7).
   //
-  // status: 'grace_period' (not the accounts table's own 'active' default) — locked decision,
-  // no free usage at all. No payment method is collected at signup (see the Stripe comment
-  // below), so every new account starts read-only via lib/auth/rbac.ts's requireActiveAccount()
-  // until they add a card in the Customer Portal and a real charge succeeds, which is what
-  // flips this to 'active' (the invoice.payment_succeeded webhook, app/api/billing/webhook/
-  // route.ts). Never 'suspended' here — that status's copy/severity is for a real payment that
-  // already failed once, not a brand-new account that hasn't tried yet.
+  // status at creation depends on which signup path this is:
+  //   - No planKey (legacy path, pre-Modifications-5 callers): 'grace_period' — locked v1
+  //     decision, no card collected at signup, read-only via lib/auth/rbac.ts's
+  //     requireActiveAccount() until the Customer Portal + a first real charge flips it to
+  //     'active' (invoice.payment_succeeded webhook, app/api/billing/webhook/route.ts).
+  //   - planKey: 'free' — 'active' immediately. Free is truly free forever (client-confirmed,
+  //     revision.md §2.1), there is no billing gate to wait on at all.
+  //   - planKey: 'premium'/'network' — createStripeSubscriptionForPlan() below sets 'active'
+  //     itself once the real trial subscription is created (see that function's own comment for
+  //     why: a real card is already attached, so there's no "wait for first charge" period like
+  //     the legacy no-card path has). Seeded as 'grace_period' here as a safe default in case
+  //     that Stripe call fails before reaching its own status update.
   const [account] = await db
     .insert(accounts)
     .values({
       type: "business",
       name,
       billingEmail: email,
-      status: "grace_period",
+      status: planKey === "free" ? "active" : "grace_period",
+      planKey: planKey ?? "default",
     })
     .returning();
 
@@ -78,18 +98,41 @@ export async function POST(req: Request) {
   // live subscription temporarily; /dashboard/billing degrades to a "billing not set up yet"
   // state in that case rather than 500ing, and a future manual/lazy retry (e.g. re-attempting on
   // next billing-page visit) can pick it up. Logged loudly so this never goes unnoticed.
-  try {
-    await createStripeCustomerAndSubscription({
-      accountId: account.id,
-      billingEmail: email,
-      name,
-    });
-  } catch (err) {
-    console.error(
-      `[signup] Stripe customer/subscription creation failed for account ${account.id} — account created locally without billing. This should be investigated / retried.`,
-      err
-    );
+  //
+  // Free tier: no Stripe subscription at all — see createStripeSubscriptionForPlan's own doc
+  // comment and revision.md §3.2 for why (Free never bills anything, ever).
+  if (planKey === "premium" || planKey === "network") {
+    try {
+      await createStripeSubscriptionForPlan({
+        accountId: account.id,
+        billingEmail: email,
+        name,
+        planKey,
+        cadence: cadence ?? "monthly",
+        paymentMethodId: paymentMethodId!, // presence already enforced above for these plans
+      });
+    } catch (err) {
+      console.error(
+        `[signup] Stripe subscription creation failed for account ${account.id} (plan ${planKey}) — account created locally without billing. This should be investigated / retried.`,
+        err
+      );
+    }
+  } else if (!planKey) {
+    // Legacy no-tier path — unchanged behavior for any caller that doesn't send planKey.
+    try {
+      await createStripeCustomerAndSubscription({
+        accountId: account.id,
+        billingEmail: email,
+        name,
+      });
+    } catch (err) {
+      console.error(
+        `[signup] Stripe customer/subscription creation failed for account ${account.id} — account created locally without billing. This should be investigated / retried.`,
+        err
+      );
+    }
   }
+  // planKey === "free": intentionally no Stripe call at all.
 
   const token = randomBytes(32).toString("hex");
   await db.insert(emailVerificationTokens).values({

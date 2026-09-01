@@ -2,6 +2,12 @@
 // Step 3 adds the auth-flow schemas; later steps append their own entity schemas here.
 import { z } from "zod";
 
+// Modifications 5 pricing restructure (revision.md §3.4): signup now offers real tier
+// selection. planKey/cadence/paymentMethodId are optional at the schema level and default to
+// the historical no-choice behavior (planKey omitted = old "default" plan, no card) so this
+// stays backward-compatible with any caller that doesn't know about tiers yet — the actual
+// required-ness (a paymentMethodId for paid tiers) is enforced in the route handler itself,
+// where it can produce a real field-specific error rather than a generic schema failure.
 export const signupSchema = z.object({
   name: z.string().trim().min(1, "Business name is required").max(200),
   email: z.email("Enter a valid email address").trim().toLowerCase(),
@@ -9,6 +15,9 @@ export const signupSchema = z.object({
     .string()
     .min(8, "Password must be at least 8 characters")
     .max(72, "Password is too long"),
+  planKey: z.enum(["free", "premium", "network"]).optional(),
+  cadence: z.enum(["monthly", "annual"]).optional(),
+  paymentMethodId: z.string().trim().min(1).optional(),
 });
 export type SignupInput = z.infer<typeof signupSchema>;
 

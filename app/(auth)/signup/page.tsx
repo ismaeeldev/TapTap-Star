@@ -1,34 +1,84 @@
 "use client";
 
+// Modifications 5 pricing restructure (revision.md §3.4) — signup now offers real tier
+// selection (previously every account was silently created on the single old "default" plan
+// with no choice at all) and, for Premium/Network, real upfront card collection via Stripe
+// Elements (client-confirmed: "Yes, card since the beginning"). Free tier skips card collection
+// entirely — it's truly free forever, nothing to charge.
+//
+// The /pricing page's "Get started"/"Get N days free" buttons link here with ?plan=<key> — that
+// query param preselects the plan below rather than starting the user back at a blank picker.
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, Check } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AnimatedGradientBorder } from "@/components/shared/animated-gradient-border";
 import { Button } from "@/components/ui/button";
+import { StripeCardForm } from "@/components/billing/stripe-card-form";
 import { signupSchema, type SignupInput } from "@/lib/validation";
 import { toast } from "@/lib/toast";
+import { cn } from "@/lib/utils";
+
+type PlanKey = "free" | "premium" | "network";
+
+const PLAN_INFO: Record<PlanKey, { name: string; blurb: string }> = {
+  free: { name: "Free", blurb: "$0/mo forever, 1 location" },
+  premium: { name: "Premium", blurb: "$25/mo, 14-day free trial" },
+  network: { name: "Network", blurb: "$60/mo, unlimited locations, 14-day free trial" },
+};
+
+function isPlanKey(value: string | null): value is PlanKey {
+  return value === "free" || value === "premium" || value === "network";
+}
 
 export default function SignupPage() {
+  return (
+    <React.Suspense fallback={null}>
+      <SignupPageContent />
+    </React.Suspense>
+  );
+}
+
+function SignupPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const preselected = searchParams.get("plan");
+
+  const [planKey, setPlanKey] = React.useState<PlanKey>(isPlanKey(preselected) ? preselected : "free");
   const [showPassword, setShowPassword] = React.useState(false);
+  const [paymentMethodId, setPaymentMethodId] = React.useState<string | null>(null);
+  const [submitting, setSubmitting] = React.useState(false);
+
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<SignupInput>({ resolver: zodResolver(signupSchema) });
 
+  const requiresCard = planKey === "premium" || planKey === "network";
+
   const onSubmit = async (values: SignupInput) => {
+    if (requiresCard && !paymentMethodId) {
+      toast.error("Enter a valid card to continue.");
+      return;
+    }
+
+    setSubmitting(true);
     try {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+        body: JSON.stringify({
+          ...values,
+          planKey,
+          cadence: "monthly",
+          ...(requiresCard ? { paymentMethodId } : {}),
+        }),
       });
 
       if (!res.ok) {
@@ -39,9 +89,6 @@ export default function SignupPage() {
 
       const data = await res.json().catch(() => ({ emailSent: false }));
 
-      // Only claim the email was sent when the send actually succeeded — the account itself is
-      // still created either way, but the copy (and the next page's messaging) must reflect
-      // reality, not just assume the send worked because the API call didn't throw.
       if (data.emailSent) {
         toast.success("Account created — check your inbox to verify your email.");
       } else {
@@ -54,6 +101,8 @@ export default function SignupPage() {
       );
     } catch {
       toast.error("Network error — please check your connection and try again.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -67,6 +116,41 @@ export default function SignupPage() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+          {/* Plan selector — client-requested tier structure (Free/Premium/Network),
+              revision.md §2.1. Compact pill row rather than reusing the full pricing-tiers
+              cards here — this is a quick confirm/change step, not the primary comparison
+              (that's /pricing, which is where these links come from). */}
+          <div className="space-y-1.5">
+            <Label>Plan</Label>
+            <div className="grid grid-cols-3 gap-2">
+              {(Object.keys(PLAN_INFO) as PlanKey[]).map((key) => {
+                const active = planKey === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setPlanKey(key)}
+                    aria-pressed={active}
+                    className={cn(
+                      "relative rounded-md border px-3 py-2.5 text-left transition-colors",
+                      active
+                        ? "border-brand bg-brand-subtle"
+                        : "border-border-default hover:border-text-muted"
+                    )}
+                  >
+                    {active && (
+                      <Check className="absolute top-2 right-2 size-3.5 text-brand" />
+                    )}
+                    <p className="text-body-sm font-semibold text-text-primary">
+                      {PLAN_INFO[key].name}
+                    </p>
+                    <p className="mt-0.5 text-caption text-text-muted">{PLAN_INFO[key].blurb}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="space-y-1.5">
             <Label htmlFor="name">Business name</Label>
             <Input
@@ -124,16 +208,27 @@ export default function SignupPage() {
             )}
           </div>
 
+          {requiresCard && (
+            <div className="space-y-1.5">
+              <Label>Card details</Label>
+              <StripeCardForm onPaymentMethodReady={setPaymentMethodId} disabled={submitting} />
+            </div>
+          )}
+
           <AnimatedGradientBorder className="w-full">
             <Button
               type="submit"
               variant="secondary"
               size="hero"
               className="w-full border-0 bg-transparent hover:bg-transparent hover:scale-100"
-              disabled={isSubmitting}
+              disabled={submitting || (requiresCard && !paymentMethodId)}
             >
-              {isSubmitting && <Loader2 className="animate-spin" />}
-              {isSubmitting ? "Creating account…" : "Create account"}
+              {submitting && <Loader2 className="animate-spin" />}
+              {submitting
+                ? "Creating account…"
+                : requiresCard
+                  ? "Start free trial"
+                  : "Create account"}
             </Button>
           </AnimatedGradientBorder>
         </form>
