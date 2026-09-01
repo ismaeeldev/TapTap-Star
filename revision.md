@@ -206,9 +206,14 @@ browser test before moving to the next, committed and pushed individually:
    (commit pending). Verified all 3 tiers end-to-end against real Stripe test mode.
 5. ✅ **Done** — Dashboard billing: plan switcher (upgrade/downgrade anytime, commit
    pending). Verified all 3 transition types against real Stripe test mode.
-6. ⏳ **Not started** — Location cap enforcement for capped tiers.
+6. ✅ **Done** — Location cap enforcement for capped tiers (commit pending). Verified
+   Free blocks at 1, Network stays unlimited, legacy default-plan accounts unaffected.
 7. ⏳ **Not started, separate/later** — AI review-response feature — only after its own
    scoping questions are answered (§2.3).
+
+**All 6 core pricing-restructure steps are now complete.** Only step 7 (AI draft-reply,
+deliberately scoped as a separate follow-up project) and the small open items in §2.3
+remain.
 
 Each of the above is its own commit, its own live Playwright verification, its own
 push to both `origin` and `me-origin`, matching the established pattern for this project.
