@@ -127,6 +127,25 @@ are called out so they don't get silently skipped:
       live — this needs a Google-reviews-import feature that doesn't exist yet before any
       "draft a reply" UI is meaningful. Treated as its own follow-up project (see §3.5),
       not bundled into the initial pricing-tier rollout.
+      **Important prior context found in `../Refrence/Chat.txt` and
+      `../AgentGuide/00_SCOPE_DOCUMENT.md` §5 / `06_OPEN_QUESTIONS_FOR_CLIENT.md` #5**:
+      this exact feature (AI review auto-responder) was already raised by the client
+      once before, early in the project (chat, Aug 4), alongside 4 related Digifeel
+      features (negative-review filtering, AI sentiment summaries, competitor/SEO
+      monitoring, multi-platform review routing). That earlier round investigated
+      Digifeel directly and found all 5 are bundled in Digifeel's own separate paid
+      "Digifeel Pro" tier, not their base product — and were formally **locked as
+      out-of-MVP-scope**, "a natural v2 roadmap item, not something silently dropped,
+      since it was never part of the priced $160/21-day scope to begin with." The only
+      extension point deliberately left in place for this was the generic
+      `notification_events` service (already built, used for real MVP emails) — no
+      speculative Review/Sentiment/Competitor tables were built. This client-requested
+      pricing-tier placement of "AI-powered draft-reply suggestions" under Premium/
+      Network (revision.md §2.2) is the client re-raising the same feature in a new
+      context — worth flagging back to them that it was previously scoped as a
+      separate, additionally-priced v2 feature, not included in the original
+      engagement, before committing to build it as part of this pricing work at no
+      extra cost.
 - [x] **Done** — Network's "+$10/mo per location beyond the first" is now real (see §6's
       change log). Not reachable by agency accounts at all — the plan switcher
       (`app/api/billing/change-plan/route.ts`) explicitly blocks agency accounts from
