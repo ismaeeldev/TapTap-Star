@@ -227,23 +227,35 @@ push to both `origin` and `me-origin`, matching the established pattern for this
 
 ---
 
-## 5. Testing checklist (to run once each step above is built)
+## 5. Testing checklist
 
-- [ ] Free tier signup → correct default plan, location cap enforced, trial banner (if
-      applicable) shows correctly.
-- [ ] Premium/Network tier signup → correct Stripe subscription created with the right
-      price + trial period.
-- [ ] Trial expiration → subscription correctly transitions to a real charge (test via
-      Stripe test clocks, not by waiting 14 real days).
-- [ ] Plan switch (upgrade/downgrade) from dashboard billing page → Stripe subscription
-      updated correctly, `accounts.planKey` updated, no double-billing.
-- [ ] Location cap: attempting to add a location past the limit on Free/Premium shows a
-      clear error + upgrade prompt, not a silent failure or crash.
-- [ ] Agency accounts: confirm the existing per-managed-business multiplier still works
-      correctly against whichever tier an agency is on.
-- [ ] Marketing pricing page: all 3 tiers render correctly, light + dark mode, mobile.
-- [ ] No regressions on the existing single-plan accounts already in the DB during/after
-      migration to the new multi-tier model.
+Written before implementation started, as a target list — every item below except one
+has since been verified for real against Stripe test mode as each step was built (see
+§6's change log for the specific runs). Checked off to reflect that; this section had
+gone stale (still showing all-unchecked) even after the work was actually done.
+
+- [x] Free tier signup → correct plan, location cap enforced, no trial (Free has none).
+- [x] Premium/Network tier signup → correct Stripe subscription, right price + trial
+      period. Verified via real signups with Stripe's test card, confirmed `trialing`
+      status and exact trial_end via direct Stripe API reads.
+- [ ] **Not tested** — Trial expiration → subscription correctly transitions to a real
+      charge. Needs Stripe test clocks to simulate 14 days passing; hasn't been run.
+      Worth doing before this goes anywhere near real customers, but doesn't block
+      anything else — the trial *creation* side is fully verified, only the *end of
+      trial* transition is unverified.
+- [x] Plan switch (upgrade/downgrade), all transition types, including the
+      Network-with-multiple-locations → capped-tier downgrade edge case (blocked
+      correctly, real 400 with a clear message).
+- [x] Location cap: verified Free blocks at 1 with a clear error, Network stays
+      unlimited, legacy accounts unaffected.
+- [x] Agency accounts: confirmed they're structurally blocked from the new tier system
+      entirely (the plan-switcher route rejects `account.type === "agency"`), so the
+      existing `managedBusinessCount` multiplier is untouched by any of this work.
+- [x] Marketing pricing page: verified light/dark/mobile, zero regressions on
+      homepage/FAQ.
+- [x] No regressions on existing single-plan accounts: verified directly against the
+      seeded `owner@downtowncafe.local` account (still `planKey: "default"`,
+      unaffected by every step including the location cap).
 
 ---
 
