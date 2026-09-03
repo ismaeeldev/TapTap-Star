@@ -7,6 +7,7 @@ import { withDbRetry } from "@/lib/db/retry";
 import { accounts } from "@/lib/db/schema";
 import { Logo } from "@/components/shared/logo";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
+import { InstallAppButton } from "@/components/shared/install-app-button";
 import { Button } from "@/components/ui/button";
 import { OnboardingTour } from "@/components/dashboard/onboarding-tour";
 import { DashboardNav } from "./dashboard-nav";
@@ -50,13 +51,22 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="flex min-h-svh flex-col bg-bg-page lg:flex-row">
-      <aside className="border-b border-border-default bg-bg-surface px-4 py-3 shadow-xs lg:w-64 lg:shrink-0 lg:border-r lg:border-b-0 lg:px-4 lg:py-6">
+      <aside className="flex flex-col border-b border-border-default bg-bg-surface px-4 py-3 shadow-xs lg:w-64 lg:shrink-0 lg:border-r lg:border-b-0 lg:px-4 lg:py-6">
         <div className="mb-6 hidden justify-center border-b border-border-default pb-6 lg:flex">
           <Link href="/dashboard" className="no-underline">
             <Logo />
           </Link>
         </div>
         <DashboardNav showClients={showClients} />
+
+        {/* Sidebar footer (client request) — install affordance lives here rather than only the
+            topbar, since this is the one place every dashboard screen shares. Hidden on the
+            mobile horizontal-scroller layout (same lg:-gated pattern as the logo above it) —
+            surfaced there instead via the topbar's mobile menu would need its own design pass,
+            not in scope here; desktop/tablet sidebar is the primary target anyway. */}
+        <div className="mt-auto hidden pt-6 lg:block">
+          <InstallAppButton variant="sidebar" />
+        </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">

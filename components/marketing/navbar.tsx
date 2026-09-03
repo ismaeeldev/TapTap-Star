@@ -6,6 +6,7 @@ import { useScroll, useMotionValueEvent, motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { Logo } from "@/components/shared/logo";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
+import { InstallAppButton } from "@/components/shared/install-app-button";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -61,6 +62,7 @@ export function MarketingNavbar() {
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
+          <InstallAppButton variant="navbar" />
           <ThemeToggle />
           <Button asChild variant="ghost" size="sm">
             <Link href="/login">Log in</Link>
@@ -96,6 +98,7 @@ export function MarketingNavbar() {
             </Link>
           ))}
           <div className="mt-2 flex flex-col gap-2 border-t border-border-default pt-3">
+            <InstallAppButton variant="sidebar" />
             <Button asChild variant="secondary" onClick={() => setMobileOpen(false)}>
               <Link href="/login">Log in</Link>
             </Button>
