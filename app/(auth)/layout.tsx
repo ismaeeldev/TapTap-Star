@@ -39,8 +39,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             <Image
               src="/login_image.png"
               alt="Physical NFC review cards, each linking straight to a Google review"
-              width={1122}
-              height={1402}
+              width={1254}
+              height={1254}
               className="h-auto w-full object-cover"
               priority
             />

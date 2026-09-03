@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { devices, locations, scans } from "@/lib/db/schema";
 import { redis } from "@/lib/redis/client";
@@ -28,7 +28,15 @@ export async function GET(
   // location's google_review_url) is already an absolute URL and doesn't use this at all.
   const appUrl = new URL(request.url).origin;
 
-  const device = await db.query.devices.findFirst({ where: eq(devices.code, code) });
+  // Case-insensitive match on purpose (Modifications 6 fix): devices.code is generated from a
+  // mixed-case alphabet (lib/qr/index.ts) so DB uniqueness stays case-sensitive, but a physical
+  // NFC/QR tag's printed/engraved code can end up in a different case than what's stored (found
+  // live on device w3PA58E6, printed/scanned as W3PA58E6 — exact eq() match silently 404'd it,
+  // showing the customer a Taptapstar "not found" page instead of the business's review link).
+  // Verified safe: zero case-fold collisions across all 412 existing device codes at time of fix.
+  const device = await db.query.devices.findFirst({
+    where: sql`lower(${devices.code}) = lower(${code})`,
+  });
 
   if (!device) {
     return NextResponse.redirect(new URL(`/r/not-found?code=${encodeURIComponent(code)}`, appUrl));

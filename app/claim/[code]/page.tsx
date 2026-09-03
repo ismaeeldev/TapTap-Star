@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { eq } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { auth } from "@/lib/auth/auth";
 import { db } from "@/lib/db/client";
 import { devices } from "@/lib/db/schema";
@@ -20,7 +20,10 @@ export default async function ClaimPage({
 }) {
   const { code } = await params;
 
-  const device = await db.query.devices.findFirst({ where: eq(devices.code, code) });
+  // Case-insensitive match — same fix/reasoning as app/r/[code]/route.ts (Modifications 6).
+  const device = await db.query.devices.findFirst({
+    where: sql`lower(${devices.code}) = lower(${code})`,
+  });
 
   if (!device) {
     return (

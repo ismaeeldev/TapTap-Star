@@ -79,7 +79,7 @@ function AddLocationDialog({ trigger }: { trigger: React.ReactNode }) {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="loc-url">Google review URL</Label>
+            <Label htmlFor="loc-url">Destination link</Label>
             <Input
               id="loc-url"
               value={form.googleReviewUrl}
@@ -198,7 +198,7 @@ function EditDeleteControls({ location }: { location: LocationRow }) {
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Google review URL</Label>
+              <Label>Destination link</Label>
               <Input
                 value={form.googleReviewUrl}
                 onChange={(e) => setForm({ ...form, googleReviewUrl: e.target.value })}

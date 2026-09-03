@@ -430,7 +430,7 @@ function NewLocationForm({
         <Input id="loc-address" value={address} onChange={(e) => setAddress(e.target.value)} />
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="loc-review-url">Google review link</Label>
+        <Label htmlFor="loc-review-url">Destination link</Label>
         <Input
           id="loc-review-url"
           placeholder="https://g.page/r/..."

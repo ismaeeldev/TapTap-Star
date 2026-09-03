@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { FaqAccordion } from "@/components/marketing/faq-accordion";
-import { getPublicPricingPlan } from "@/lib/queries/marketing";
+import { getPublicPricingTiers } from "@/lib/queries/marketing";
 
 export const metadata: Metadata = {
   title: "FAQ — Taptapstar",
@@ -8,12 +8,14 @@ export const metadata: Metadata = {
 };
 
 // Same "always read live, never hardcode" rule as the homepage/pricing routes — the FAQ's
-// pricing answer interpolates this live value, so it must be dynamic too.
+// pricing answer interpolates live values, so it must be dynamic too.
 export const dynamic = "force-dynamic";
 
 // Standalone route reusing the same FaqAccordion component as the homepage FAQ section.
+// Modifications 6: reads the 3-tier Free/Premium/Network prices (see app/(marketing)/page.tsx's
+// comment for the full reasoning) instead of the retired single flat plan.
 export default async function FaqPage() {
-  const plan = await getPublicPricingPlan();
+  const tiers = await getPublicPricingTiers();
 
   return (
     <div className="mx-auto max-w-3xl px-6 pt-32 pb-24 md:px-8">
@@ -26,7 +28,7 @@ export default async function FaqPage() {
         </p>
       </div>
       <div className="mt-14">
-        <FaqAccordion priceCents={plan.priceCents} currency={plan.currency} />
+        <FaqAccordion tiers={tiers} currency="usd" />
       </div>
     </div>
   );

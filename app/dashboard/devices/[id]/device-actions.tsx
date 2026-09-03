@@ -240,7 +240,7 @@ export function DeviceActions({
             <DialogHeader>
               <DialogTitle>Deactivate this device?</DialogTitle>
               <DialogDescription>
-                Scans will stop redirecting customers to your Google review link until this
+                Scans will stop redirecting customers to your destination link until this
                 device is reassigned to a location again.
               </DialogDescription>
             </DialogHeader>
