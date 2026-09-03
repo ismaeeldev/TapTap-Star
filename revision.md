@@ -316,9 +316,52 @@ gone stale (still showing all-unchecked) even after the work was actually done.
     `AuthError` instead, confirmed via a live test that the real message now reaches
     a toast in the browser.
 
+## 7. Modifications 6 (separate PDF, Sept 3-4) — quick fixes, not part of the pricing plan above
+
+Client sent a new PDF ("Modifications 6") plus a support-chat thread reporting a real
+production bug. All items below verified against the live DB/code before fixing (not
+assumed), built, tested, and shipped:
+
+- **Bug found and fixed: broken redirect on device `w3PA58E6`.** Client reported that
+  their one physical demo stand's Alibaba link redirected to Taptapstar's own 404 page
+  instead of Alibaba. Root cause confirmed via direct DB read: the device's code is
+  stored as `w3PA58E6`, but the physical stand's printed QR/NFC tag encodes
+  `W3PA58E6` (uppercase `W`) — `/r/[code]` and `/claim/[code]` both did an exact-match
+  `eq()` lookup, so the real-world tap/scan never matched and silently fell through to
+  the "not found" branch. Device codes intentionally use a mixed-case alphabet
+  (`lib/qr/index.ts`) so DB uniqueness stays case-sensitive by design — verified zero
+  case-fold collisions across all 412 existing devices before switching both live
+  lookup sites to case-insensitive (`lower(code) = lower(?)`) matching. Verified live:
+  both `/r/W3PA58E6` and `/r/w3PA58E6` now redirect correctly to the stored Alibaba
+  URL; a genuinely unknown code still correctly 404s.
+- **"Google review link" → "Destination link"** in the location form (claim wizard,
+  dashboard locations list add/edit) and the device-deactivate dialog copy — client's
+  request, since not every physical card points at Google. DB column name
+  (`googleReviewUrl`) and API field name deliberately left unchanged (internal only).
+- **Homepage + `/faq` switched to the real 3-tier pricing.** These were the one place
+  in the app still showing the retired single flat-rate plan ($29.90) after the
+  Modifications 5 restructure — flagged at the time (§3.3) as a known follow-up, not
+  bundled into that step. `PricingCard`/`FaqAccordion`'s old flat-rate copy replaced
+  with `PricingTiers` and a rewritten tier-aware FAQ answer, both reading live prices.
+  Feature checkmarks cross-checked against the client's PDF row-by-row — already
+  matched exactly, no change needed there.
+- **Login/signup image fixed.** Client had already replaced `public/login_image.png`
+  with a new square (1254×1254) asset directly in the folder; the layout's `<Image>`
+  still declared the old portrait image's dimensions (1122×1402), which would have
+  visually distorted the new image. Corrected the width/height props; removed the
+  unused leftover old image file.
+
+All verified: lint clean, production build clean, live `next start` + real HTTP checks
+(not just UI text matching) for the redirect fix, Playwright-rendered check that the
+FAQ's live tier prices actually appear, and screenshots confirming the homepage tier
+grid and login image render correctly. Committed and pushed to both remotes
+(`4a78a82`).
+
 ---
 
 *This document is updated as decisions come in and work progresses. All core
 pricing-restructure work (steps 1-6 plus the Network per-location follow-up) is built,
-verified, and live. Remaining: step 7 (AI draft-reply — needs its own scoping pass) and
-the Free-tier device-cap number — both waiting on the client, not on more building.*
+verified, and live. Modifications 6 (redirect bug, link label, homepage pricing,
+login image) is also built, verified, and live. Remaining: step 7 (AI draft-reply —
+needs its own scoping pass) and the Free-tier device-cap number — both waiting on the
+client, not on more building.*
