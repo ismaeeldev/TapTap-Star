@@ -108,14 +108,18 @@ function SignupPageContent() {
 
   return (
     <Card variant="glass" className="shadow-xl">
-      <CardHeader className="space-y-2">
+      <CardHeader className="space-y-1.5">
         <CardTitle className="font-display text-display-md">Create your account</CardTitle>
         <CardDescription className="text-body-sm">
           Start turning every tap into a 5-star review — set up in minutes.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+        {/* Tightened from space-y-5 (Modifications 6 follow-up: signup was overflowing the
+            viewport on common laptop heights once the card-collection step is shown for
+            Premium/Network — the right column now scrolls internally if it still needs to,
+            but this keeps the common case fitting without any scroll at all). */}
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
           {/* Plan selector — client-requested tier structure (Free/Premium/Network),
               revision.md §2.1. Compact pill row rather than reusing the full pricing-tiers
               cards here — this is a quick confirm/change step, not the primary comparison
