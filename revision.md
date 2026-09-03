@@ -350,12 +350,18 @@ assumed), built, tested, and shipped:
   still declared the old portrait image's dimensions (1122×1402), which would have
   visually distorted the new image. Corrected the width/height props; removed the
   unused leftover old image file.
+- **Testimonials redesigned into a real testimonial layout.** Client: "fill this with
+  reviews, use AI to create some of them." Replaced the earlier explicit per-card
+  "Preview" badge grid (3 cards) with a normal-reading testimonials section — 5-star
+  ratings, initials avatar, name + role, 6 cards — while keeping one section-level
+  disclaimer line (not a badge on every card) so it still doesn't present itself as
+  real collected customer feedback. All names/businesses generic placeholders.
 
 All verified: lint clean, production build clean, live `next start` + real HTTP checks
 (not just UI text matching) for the redirect fix, Playwright-rendered check that the
 FAQ's live tier prices actually appear, and screenshots confirming the homepage tier
-grid and login image render correctly. Committed and pushed to both remotes
-(`4a78a82`).
+grid, login image, and testimonials all render correctly. Committed and pushed to
+both remotes (`4a78a82`, `0ce23e1`, `21608c3`).
 
 ---
 
