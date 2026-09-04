@@ -39,9 +39,19 @@ export function generateDeviceCodes(count: number): string[] {
 /** Builds the public claim URL for a device code, `${NEXT_PUBLIC_APP_URL}/r/{code}` — this is a
  * printed/exported artifact (QR image, CSV column), not a live-request redirect target, so
  * (unlike app/r/[code]/route.ts's internal redirects) using the configured public app URL here
- * is correct, not the same-app-origin mistake documented in the regression watchlist. */
+ * is correct, not the same-app-origin mistake documented in the regression watchlist.
+ *
+ * Real incident (found investigating a client report that a physical QR stand redirected
+ * nowhere real): NEXT_PUBLIC_APP_URL was set to "localhost:3000" in the actual production
+ * deployment, so every device ever generated/imported (410/410, checked directly) had this
+ * baked into its stored QR image as a dead localhost link. The fallback below previously read
+ * "https://taptapstar.com" — a domain that, it turns out, this project doesn't even own (a real
+ * unrelated business's Shopify store) — now points at the actual live production URL instead,
+ * so a future request that somehow runs without the env var set produces a working QR rather
+ * than repeating this exact class of bug. The real fix is still getting NEXT_PUBLIC_APP_URL set
+ * correctly in Vercel; this fallback is a safety net, not a substitute for that. */
 export function buildClaimUrl(code: string): string {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://taptapstar.com";
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://taptap-star.vercel.app";
   return `${base.replace(/\/$/, "")}/r/${code}`;
 }
 
