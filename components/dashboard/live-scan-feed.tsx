@@ -20,13 +20,19 @@ const fetcher = (url: string) =>
     return res.json();
   });
 
+// Modifications 7 (client PDF, item 2): "I want this to be in minutes, then hours and after 24
+// hours 1 day and x hours, not only minutes and hours." Previously capped out at raw hours
+// (client's screenshot showed "82h ago") — past 24h this now reads "Nd Nh ago" instead.
 function timeAgo(iso: string) {
   const seconds = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
   if (seconds < 60) return `${seconds}s ago`;
   const minutes = Math.round(seconds / 60);
   if (minutes < 60) return `${minutes}m ago`;
   const hours = Math.round(minutes / 60);
-  return `${hours}h ago`;
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  const remainingHours = hours % 24;
+  return remainingHours > 0 ? `${days}d ${remainingHours}h ago` : `${days}d ago`;
 }
 
 // Client-side polling live scan feed — every 5s, per the locked decision (05_MASTER_BUILD_GUIDE.md

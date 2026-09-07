@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Copy, Pencil, Target, Trash2 } from "lucide-react";
+import { Copy, Pencil, Plus, Target, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -164,6 +164,88 @@ function EmployeeControls({
   );
 }
 
+// Client-requested (Modifications 7 PDF, item 1): "I don't have the option to add a new
+// employee. I want this so later the plates and stands could be linked to the employees name."
+// The POST /api/employees endpoint already existed (used inline by the claim wizard) — this is
+// just the missing direct entry point on the Employees page itself, reusing that same endpoint.
+function AddEmployeeDialog({
+  locations,
+  onAdded,
+}: {
+  locations: { id: string; name: string }[];
+  onAdded: (locationId: string, employee: { id: string; name: string; accessToken: string }) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [locationId, setLocationId] = useState(locations[0]?.id ?? "");
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleAdd() {
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/employees", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, locationId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.message ?? "Failed to add employee");
+        return;
+      }
+      toast.success(`${data.employee.name} added`);
+      onAdded(locationId, data.employee);
+      setName("");
+      setOpen(false);
+    } catch {
+      toast.error("Failed to add employee — check your connection and try again");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm">
+          <Plus className="size-3.5" /> Add employee
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add employee</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="new-emp-name">Name</Label>
+            <Input id="new-emp-name" value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="new-emp-location">Location</Label>
+            <Select value={locationId} onValueChange={setLocationId}>
+              <SelectTrigger id="new-emp-location" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {locations.map((loc) => (
+                  <SelectItem key={loc.id} value={loc.id}>
+                    {loc.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button onClick={handleAdd} disabled={submitting || !name.trim() || !locationId}>
+            {submitting ? "Adding…" : "Add employee"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function TeamTargetPanel({
   locationId,
   locationName,
@@ -317,6 +399,29 @@ export function EmployeeLeaderboard({
     );
   }
 
+  // A brand-new employee has 0 scans by construction (just created, nothing scanned to them
+  // yet) — appended at the bottom of that location's ranking rather than re-fetching the whole
+  // leaderboard, and re-ranked below so rank/totalEmployees stay correct without a round trip.
+  function handleEmployeeAdded(
+    locationId: string,
+    employee: { id: string; name: string; accessToken: string }
+  ) {
+    setGroups((gs) =>
+      gs.map((g) => {
+        if (g.location.id !== locationId) return g;
+        const withNew = [
+          ...g.employees,
+          { ...employee, locationId, scanCount: 0, rank: 0, totalEmployees: 0 },
+        ];
+        const total = withNew.length;
+        return {
+          ...g,
+          employees: withNew.map((e, i) => ({ ...e, rank: i + 1, totalEmployees: total })),
+        };
+      })
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end gap-3 rounded-lg border border-border-default bg-bg-card p-4">
@@ -334,6 +439,12 @@ export function EmployeeLeaderboard({
         <Button variant="ghost" onClick={() => setByLocation((v) => !v)}>
           {byLocation ? "Show combined ranking" : "Show per-location breakdown"}
         </Button>
+        <div className="ml-auto">
+          <AddEmployeeDialog
+            locations={groups.map((g) => g.location)}
+            onAdded={handleEmployeeAdded}
+          />
+        </div>
       </div>
 
       {error && (

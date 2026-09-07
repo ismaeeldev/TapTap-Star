@@ -51,7 +51,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="flex min-h-svh flex-col bg-bg-page lg:flex-row">
-      <aside className="flex flex-col border-b border-border-default bg-bg-surface px-4 py-3 shadow-xs lg:w-64 lg:shrink-0 lg:border-r lg:border-b-0 lg:px-4 lg:py-6">
+      <aside className="flex flex-col border-b border-border-default bg-bg-surface px-4 py-3 shadow-xs lg:sticky lg:top-0 lg:h-svh lg:w-64 lg:shrink-0 lg:overflow-y-auto lg:border-r lg:border-b-0 lg:px-4 lg:py-6">
         <div className="mb-6 hidden justify-center border-b border-border-default pb-6 lg:flex">
           <Link href="/dashboard" className="no-underline">
             <Logo />
@@ -59,11 +59,20 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </div>
         <DashboardNav showClients={showClients} />
 
-        {/* Sidebar footer (client request) — install affordance lives here rather than only the
-            topbar, since this is the one place every dashboard screen shares. Hidden on the
-            mobile horizontal-scroller layout (same lg:-gated pattern as the logo above it) —
-            surfaced there instead via the topbar's mobile menu would need its own design pass,
-            not in scope here; desktop/tablet sidebar is the primary target anyway. */}
+        {/* Sidebar footer (client request, Modifications 7 item 3): "The option of install app
+            in the left bottom corner I want it to be visible all the time, not only when
+            reaching the bottom of the page." mt-auto alone only pins to the bottom of this
+            flex column's own content — with a normal (non-sticky, auto-height) <aside>, that
+            column grows exactly as tall as the nav items inside it, so the button only becomes
+            visible once the page is scrolled all the way down, exactly what the client's
+            screenshot showed. Fixed at the <aside> level (lg:sticky lg:top-0 lg:h-svh) instead
+            of on this wrapper alone — pins the whole sidebar height to the viewport, so mt-auto
+            now correctly means "bottom of the screen," and the sidebar scrolls its own contents
+            independently (lg:overflow-y-auto) if the nav ever grows taller than the viewport,
+            rather than pushing the button off-screen again. Hidden on the mobile horizontal-
+            scroller layout (same lg:-gated pattern as the logo above it) — surfaced there
+            instead via the topbar's mobile menu would need its own design pass, not in scope
+            here; desktop/tablet sidebar is the primary target anyway. */}
         <div className="mt-auto hidden pt-6 lg:block">
           <InstallAppButton variant="sidebar" />
         </div>

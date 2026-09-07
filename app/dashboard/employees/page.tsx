@@ -20,7 +20,7 @@ export default async function EmployeesPage() {
       <EmptyState
         icon={Users}
         title="No employees yet"
-        description="Add a location first, then assign employees to it from the claim wizard or a device's reassign action."
+        description="Add a location first — employees are always assigned to a location, so there's nothing to add one to yet."
       />
     );
   }
@@ -28,17 +28,10 @@ export default async function EmployeesPage() {
   const range = getCurrentMonthRange();
   const groups = await getAccountLeaderboard(session.user.accountId, range);
 
-  const hasAnyEmployees = groups.some((g) => g.employees.length > 0);
-  if (!hasAnyEmployees) {
-    return (
-      <EmptyState
-        icon={Users}
-        title="No employees yet"
-        description="Assign an employee to a device to start tracking their scan performance."
-      />
-    );
-  }
-
+  // Modifications 7 (client PDF, item 1): "I don't have the option to add a new employee."
+  // Previously, zero employees meant a dead-end EmptyState with no path forward at all — exactly
+  // the state the client was stuck in. Now always renders the real leaderboard shell (which
+  // includes the Add employee button) even with zero employees, so there's always a way in.
   return (
     <div className="space-y-6">
       <div>

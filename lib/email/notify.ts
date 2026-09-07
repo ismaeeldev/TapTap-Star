@@ -22,6 +22,7 @@ import { PaymentRecoveredEmail } from "@/lib/email/templates/PaymentRecoveredEma
 import { ContactFormAdminEmail } from "@/lib/email/templates/ContactFormAdminEmail";
 import { AgencyApprovedEmail } from "@/lib/email/templates/AgencyApprovedEmail";
 import { AgencyRejectedEmail } from "@/lib/email/templates/AgencyRejectedEmail";
+import { AgencyRequestSubmittedEmail } from "@/lib/email/templates/AgencyRequestSubmittedEmail";
 
 // The 11 triggers from 02_APPLICATION_FLOW.md section 8.
 export type NotificationType =
@@ -35,7 +36,8 @@ export type NotificationType =
   | "payment_recovered"
   | "contact_form_submitted"
   | "agency_request_approved"
-  | "agency_request_rejected";
+  | "agency_request_rejected"
+  | "agency_request_submitted";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Payload = Record<string, any>;
@@ -119,6 +121,14 @@ function render(type: NotificationType, payload: Payload): Rendered {
       return {
         subject: "Your agency request was not approved",
         react: React.createElement(AgencyRejectedEmail, { reason: payload.reason ?? null }),
+      };
+    case "agency_request_submitted":
+      return {
+        subject: `New agency request from ${payload.accountName}`,
+        react: React.createElement(AgencyRequestSubmittedEmail, {
+          accountName: payload.accountName,
+          reviewUrl: payload.reviewUrl,
+        }),
       };
   }
 }
