@@ -244,3 +244,44 @@ export const adminDeviceSearchSchema = z.object({
   source: z.enum(["generated", "imported"]).optional(),
   page: z.coerce.number().int().min(1).default(1),
 });
+
+// ---------------------------------------------------------------------------------------
+// Review filtering (feature request, Sept 2026 round) — public, no-auth customer-facing
+// submissions (star rating + optional private feedback), and the business-owner-facing
+// settings/config schema.
+// ---------------------------------------------------------------------------------------
+
+// Public — a scanning customer submitting their star tap. No auth; code identifies the device.
+export const reviewRatingSchema = z.object({
+  code: z.string().trim().min(1, "Device code is required"),
+  rating: z.coerce.number().int().min(1, "Rating must be 1-5").max(5, "Rating must be 1-5"),
+  scanId: z.uuid().optional(),
+});
+export type ReviewRatingInput = z.infer<typeof reviewRatingSchema>;
+
+// Public — the private feedback form itself, shown only for a rating below the location's
+// threshold. Comment/contact fields are all optional (never require a frustrated customer to
+// fill in more than they want to).
+export const privateFeedbackSchema = z.object({
+  code: z.string().trim().min(1, "Device code is required"),
+  rating: z.coerce.number().int().min(1).max(5),
+  scanId: z.uuid().optional(),
+  comment: z.string().trim().max(5000).optional(),
+  contactName: z.string().trim().max(200).optional(),
+  contactEmail: z.email("Enter a valid email address").trim().toLowerCase().optional().or(z.literal("")),
+});
+export type PrivateFeedbackInput = z.infer<typeof privateFeedbackSchema>;
+
+// Business-owner-facing — the per-location filtering settings panel.
+export const reviewFilterSettingsSchema = z
+  .object({
+    reviewFilterEnabled: z.boolean(),
+    reviewFilterThreshold: z.coerce.number().int().min(1).max(5),
+    reviewDestinationType: z.enum(["google", "custom"]),
+    reviewDestinationUrl: z.url("Enter a valid URL").optional().or(z.literal("")),
+  })
+  .refine(
+    (data) => data.reviewDestinationType !== "custom" || !!data.reviewDestinationUrl,
+    { message: "A destination URL is required for a custom platform", path: ["reviewDestinationUrl"] }
+  );
+export type ReviewFilterSettingsInput = z.infer<typeof reviewFilterSettingsSchema>;

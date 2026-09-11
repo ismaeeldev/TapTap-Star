@@ -12,6 +12,7 @@ import {
   Settings,
   Building2,
   LifeBuoy,
+  MessageSquareWarning,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +27,9 @@ const NAV_ITEMS = [
   // panel and an approved agency's status/Clients pointer now live at /dashboard/agency).
   { href: "/dashboard/agency", label: "Agency", icon: Building2, tourId: "nav-agency" },
   { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3, tourId: "nav-analytics" },
+  // Review-filtering feature (client feature request, Sept 2026 round) — the private-feedback
+  // inbox ("view and manage all private feedback received").
+  { href: "/dashboard/feedback", label: "Feedback", icon: MessageSquareWarning, tourId: "nav-feedback" },
   { href: "/dashboard/billing", label: "Billing", icon: CreditCard, tourId: "nav-billing" },
   { href: "/dashboard/settings", label: "Settings", icon: Settings, tourId: "nav-settings" },
   // Client-requested (Modifications 3 PDF, item 8): "I want a support option so people can
@@ -38,11 +42,15 @@ const NAV_ITEMS = [
 // this server-side (never trust this UI toggle alone, per the Step 7 multi-tenant rule).
 export function DashboardNav({ showClients = false }: { showClients?: boolean }) {
   const pathname = usePathname();
+  // Inserted right after "Agency" by href, not a hardcoded array index — a fixed slice(0, N)
+  // silently breaks (inserts Clients in the wrong spot) every time NAV_ITEMS gains/loses an item
+  // before that point, which already happened once when Feedback was added above.
+  const agencyIdx = NAV_ITEMS.findIndex((item) => item.href === "/dashboard/agency");
   const items = showClients
     ? [
-        ...NAV_ITEMS.slice(0, 5),
+        ...NAV_ITEMS.slice(0, agencyIdx + 1),
         { href: "/dashboard/clients", label: "Clients", icon: Building2, tourId: "nav-clients" },
-        ...NAV_ITEMS.slice(5),
+        ...NAV_ITEMS.slice(agencyIdx + 1),
       ]
     : NAV_ITEMS;
 

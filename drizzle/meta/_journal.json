@@ -29,6 +29,20 @@
       "when": 1788277652822,
       "tag": "0003_network_per_location",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789148557267,
+      "tag": "0004_device_limit",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789148995037,
+      "tag": "0005_review_filtering",
+      "breakpoints": true
     }
   ]
 }

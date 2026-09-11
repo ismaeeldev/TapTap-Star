@@ -48,6 +48,12 @@ export const deviceSourceEnum = pgEnum("device_source", ["generated", "imported"
 export const targetPeriodEnum = pgEnum("target_period_type", ["weekly", "monthly"]);
 export const billingUnitEnum = pgEnum("billing_unit", ["flat", "per_device"]);
 export const planAppliesToEnum = pgEnum("plan_applies_to", ["business", "agency"]);
+// Review-filtering feature (client feature request, Sept 2026 round) — a location's positive-
+// review destination is either its existing Google review link, or a business-chosen alternate
+// platform/URL. "google" reuses locations.googleReviewUrl (no duplicated URL column); "custom"
+// reads locations.reviewDestinationUrl instead.
+export const reviewDestinationTypeEnum = pgEnum("review_destination_type", ["google", "custom"]);
+export const privateFeedbackStatusEnum = pgEnum("private_feedback_status", ["new", "reviewed"]);
 export const subscriptionStatusEnum = pgEnum("subscription_status", [
   "active",
   "past_due",
@@ -138,10 +144,55 @@ export const locations = pgTable(
     address: text("address").notNull(),
     googleReviewUrl: text("google_review_url").notNull(),
     language: text("language").notNull().default("en"),
+    // Review-filtering feature — all nullable/defaulted so every existing location is
+    // unaffected by construction (filter starts disabled, behaves exactly like today's
+    // unconditional redirect until a business owner explicitly turns it on).
+    reviewFilterEnabled: boolean("review_filter_enabled").notNull().default(false),
+    // Star ratings >= this value redirect to the review platform; ratings below show the
+    // private feedback form. Client's example config (1-3 -> private, 4-5 -> public) is
+    // reviewFilterThreshold: 4 — the default matches that example exactly.
+    reviewFilterThreshold: integer("review_filter_threshold").notNull().default(4),
+    reviewDestinationType: reviewDestinationTypeEnum("review_destination_type")
+      .notNull()
+      .default("google"),
+    // Only meaningful when reviewDestinationType = 'custom' — a business-chosen alternate
+    // platform (Trustpilot, Yelp, etc.) instead of googleReviewUrl.
+    reviewDestinationUrl: text("review_destination_url"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("locations_account_id_idx").on(table.accountId)]
+);
+
+// ---------------------------------------------------------------------------------------
+// private_feedback — review-filtering feature: low-star submissions land here instead of
+// the public review platform, per 02_APPLICATION_FLOW.md-style reasoning (kept internal,
+// business owner reviews/manages it from the dashboard, never posted publicly by this app).
+// ---------------------------------------------------------------------------------------
+
+export const privateFeedback = pgTable(
+  "private_feedback",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    locationId: uuid("location_id")
+      .notNull()
+      .references(() => locations.id, { onDelete: "cascade" }),
+    deviceId: uuid("device_id").references(() => devices.id, { onDelete: "set null" }),
+    rating: integer("rating").notNull(),
+    comment: text("comment"),
+    // Optional — the customer may leave contact info if they want a follow-up; never required.
+    contactName: text("contact_name"),
+    contactEmail: text("contact_email"),
+    status: privateFeedbackStatusEnum("status").notNull().default("new"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("private_feedback_account_id_idx").on(table.accountId),
+    index("private_feedback_location_id_idx").on(table.locationId),
+  ]
 );
 
 // ---------------------------------------------------------------------------------------
@@ -268,6 +319,13 @@ export const pricingPlans = pgTable(
     // app/api/locations/route.ts's POST handler (added in the same pricing-restructure
     // pass) — see revision.md §3.4.
     locationLimit: integer("location_limit"),
+    // Max ACTIVE devices this plan allows; null = unlimited (Premium/Network — client-confirmed
+    // "same as Free's 1-location cap" reasoning, revision.md's AI/device-cap decision round).
+    // Enforced at activation time in app/api/devices/[id]/activate/route.ts, not at batch-create
+    // time — an unassigned/unactivated device doesn't belong to any account yet and shouldn't
+    // count against a limit (mirrors locationLimit's own "count what actually belongs to the
+    // account" reasoning).
+    deviceLimit: integer("device_limit"),
     // Free trial length in days for this plan; null/0 = no trial (the Free tier itself, and
     // the initial "default" legacy row, which predates trials entirely). Read by
     // lib/stripe/subscription.ts when creating a Stripe subscription — see revision.md §3.2.
@@ -443,6 +501,7 @@ export const accountsRelations = relations(accounts, ({ many }) => ({
   subscriptions: many(subscriptions),
   invoices: many(invoices),
   childAccounts: many(accounts, { relationName: "agencyChildren" }),
+  privateFeedback: many(privateFeedback),
 }));
 
 export const usersRelations = relations(users, ({ one }) => ({
@@ -480,6 +539,12 @@ export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
 
 export const invoicesRelations = relations(invoices, ({ one }) => ({
   account: one(accounts, { fields: [invoices.accountId], references: [accounts.id] }),
+}));
+
+export const privateFeedbackRelations = relations(privateFeedback, ({ one }) => ({
+  account: one(accounts, { fields: [privateFeedback.accountId], references: [accounts.id] }),
+  location: one(locations, { fields: [privateFeedback.locationId], references: [locations.id] }),
+  device: one(devices, { fields: [privateFeedback.deviceId], references: [devices.id] }),
 }));
 
 // ---------------------------------------------------------------------------------------

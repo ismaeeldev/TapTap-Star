@@ -12,7 +12,9 @@ export type DomainStatus =
   | "grace_period"
   | "suspended"
   | "approved"
-  | "rejected";
+  | "rejected"
+  | "new"
+  | "reviewed";
 
 const STATUS_MAP: Record<DomainStatus, { variant: React.ComponentProps<typeof Badge>["variant"]; label: string }> = {
   active: { variant: "active", label: "Active" },
@@ -23,6 +25,9 @@ const STATUS_MAP: Record<DomainStatus, { variant: React.ComponentProps<typeof Ba
   pending: { variant: "pending", label: "Pending" },
   grace_period: { variant: "pending", label: "Grace period" },
   suspended: { variant: "deactivated", label: "Suspended" },
+  // Review-filtering feature's private_feedback.status.
+  new: { variant: "pending", label: "New" },
+  reviewed: { variant: "active", label: "Reviewed" },
 };
 
 export function StatusBadge({ status }: { status: string }) {

@@ -23,6 +23,7 @@ import { ContactFormAdminEmail } from "@/lib/email/templates/ContactFormAdminEma
 import { AgencyApprovedEmail } from "@/lib/email/templates/AgencyApprovedEmail";
 import { AgencyRejectedEmail } from "@/lib/email/templates/AgencyRejectedEmail";
 import { AgencyRequestSubmittedEmail } from "@/lib/email/templates/AgencyRequestSubmittedEmail";
+import { LowRatingAlertEmail } from "@/lib/email/templates/LowRatingAlertEmail";
 
 // The 11 triggers from 02_APPLICATION_FLOW.md section 8.
 export type NotificationType =
@@ -37,7 +38,8 @@ export type NotificationType =
   | "contact_form_submitted"
   | "agency_request_approved"
   | "agency_request_rejected"
-  | "agency_request_submitted";
+  | "agency_request_submitted"
+  | "low_rating_feedback";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Payload = Record<string, any>;
@@ -128,6 +130,16 @@ function render(type: NotificationType, payload: Payload): Rendered {
         react: React.createElement(AgencyRequestSubmittedEmail, {
           accountName: payload.accountName,
           reviewUrl: payload.reviewUrl,
+        }),
+      };
+    case "low_rating_feedback":
+      return {
+        subject: `New ${payload.rating}-star feedback at ${payload.locationName}`,
+        react: React.createElement(LowRatingAlertEmail, {
+          locationName: payload.locationName,
+          rating: payload.rating,
+          comment: payload.comment ?? null,
+          feedbackUrl: payload.feedbackUrl,
         }),
       };
   }

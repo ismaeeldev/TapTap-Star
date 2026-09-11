@@ -33,12 +33,19 @@ type FeatureRow = { label: string; free: boolean; premium: boolean; network: boo
 
 // Feature split per revision.md §2.2 — Taptapstar's own product, not Digifeel's literal
 // review-management feature list.
+//
+// "AI-powered draft reply suggestions" removed (client's explicit instruction, Sept 2026 round —
+// see revision.md's AI-feature scoping history): never built, was flagged out-of-scope multiple
+// times, and this row was advertising a feature that doesn't exist. Replaced with review
+// filtering, a real, shipped Premium/Network feature (the star-rating routing feature) —
+// FREE_DEVICE_LIMIT below documents the matching Free-tier device cap decision from the same
+// round.
 const FEATURES: FeatureRow[] = [
   { label: "1 location", free: true, premium: true, network: true },
   { label: "Unlimited locations", free: false, premium: false, network: true },
   { label: "Basic analytics dashboard", free: true, premium: true, network: true },
   { label: "Full analytics (location breakdown)", free: false, premium: true, network: true },
-  { label: "AI-powered draft reply suggestions", free: false, premium: true, network: true },
+  { label: "Review filtering (route low ratings to private feedback)", free: false, premium: true, network: true },
   { label: "Real-time scan alerts", free: false, premium: true, network: true },
   { label: "Multi-location control center", free: false, premium: false, network: true },
 ];
@@ -125,7 +132,7 @@ export function PricingTiers({ tiers }: { tiers: Tier[] }) {
             <div className="flex h-full flex-col p-8">
               <TierHeader
                 name="Premium"
-                description="Activate automation and grow faster with AI-powered tools."
+                description="Protect your reputation and grow faster with review filtering."
                 priceDisplay={priceDisplay(premium)}
               />
               <p className="mt-1 text-body-sm text-text-muted">{locationSummary(premium.locationLimit)}</p>

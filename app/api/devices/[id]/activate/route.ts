@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { devices, locations, employees } from "@/lib/db/schema";
+import { devices, locations, employees, accounts } from "@/lib/db/schema";
 import { requireSession, requireActiveAccount, authErrorResponse, AuthError } from "@/lib/auth/rbac";
 import { activateDeviceSchema } from "@/lib/validation";
 import { notify } from "@/lib/email/notify";
+import { getPricingPlanByKey } from "@/lib/stripe/pricing";
 
 // POST /api/devices/:id/activate — flips a device from `unassigned` to `active`, backing the
 // claim wizard's final "Activate Device" step. Verifies the device is currently `unassigned`
@@ -44,6 +45,36 @@ export async function POST(
     });
     if (!location || location.accountId !== session.user.accountId) {
       throw new AuthError("Forbidden — location does not belong to your account", 403);
+    }
+
+    // Device cap for the Free tier (client-confirmed: same 1-device reasoning as Free's existing
+    // 1-location cap). Premium/Network are unlimited (deviceLimit: null), and so is the legacy
+    // "default" plan (deviceLimit: null from this column's additive migration) — a genuine no-op
+    // for every pre-existing account, mirroring app/api/locations/route.ts's exact pattern.
+    // Enforced here at ACTIVATION, not at batch-create time — an unassigned device belongs to no
+    // account yet and shouldn't count against anything.
+    const account = await db.query.accounts.findFirst({
+      where: eq(accounts.id, session.user.accountId),
+    });
+    if (!account) {
+      return NextResponse.json({ message: "Account not found" }, { status: 404 });
+    }
+    const plan = await getPricingPlanByKey(account.planKey);
+    if (plan.deviceLimit !== null) {
+      const [{ count }] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(devices)
+        .where(and(eq(devices.accountId, account.id), eq(devices.status, "active")));
+      if (count >= plan.deviceLimit) {
+        return NextResponse.json(
+          {
+            message: `Your ${plan.name} plan allows up to ${plan.deviceLimit} active device${
+              plan.deviceLimit === 1 ? "" : "s"
+            }. Upgrade to Premium or Network for more.`,
+          },
+          { status: 403 }
+        );
+      }
     }
 
     if (parsed.data.employeeId) {

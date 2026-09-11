@@ -3,9 +3,11 @@ import { and, eq, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth/auth";
 import { db } from "@/lib/db/client";
 import { withDbRetry } from "@/lib/db/retry";
-import { locations, devices, scans } from "@/lib/db/schema";
+import { locations, devices, scans, accounts } from "@/lib/db/schema";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { StatTile } from "@/components/shared/stat-tile";
+import { getPricingPlanByKey } from "@/lib/stripe/pricing";
+import { ReviewFilterSettings } from "./review-filter-settings";
 
 export default async function LocationDetailPage({
   params,
@@ -41,6 +43,10 @@ export default async function LocationDetailPage({
   );
   if (!location) notFound();
 
+  const account = await db.query.accounts.findFirst({ where: eq(accounts.id, accountId) });
+  const plan = account ? await getPricingPlanByKey(account.planKey) : null;
+  const canUseReviewFiltering = plan ? plan.planKey !== "free" : false;
+
   return (
     <div className="max-w-3xl space-y-6">
       <div>
@@ -49,6 +55,17 @@ export default async function LocationDetailPage({
       </div>
 
       <StatTile label="Total scans at this location" value={scanCountRow?.count ?? 0} />
+
+      <ReviewFilterSettings
+        locationId={location.id}
+        canUse={canUseReviewFiltering}
+        initial={{
+          reviewFilterEnabled: location.reviewFilterEnabled,
+          reviewFilterThreshold: location.reviewFilterThreshold,
+          reviewDestinationType: location.reviewDestinationType,
+          reviewDestinationUrl: location.reviewDestinationUrl,
+        }}
+      />
 
       <div>
         <h2 className="mb-3 text-h4 font-semibold text-text-primary">Devices here</h2>

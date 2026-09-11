@@ -11,10 +11,14 @@ export const runtime = "edge";
 //   unassigned  -> /claim/[code] (the owner activating their own new device)
 //   active      -> log a scan (throttled) + instant 302 to the location's google_review_url,
 //                  NO rendered UI, ever — a scanning customer must never see a Taptapstar page.
+//                  EXCEPTION (review-filtering feature): if the location has turned filtering
+//                  on, redirect to /r/[code]/rate (the star-picker) instead — that page is the
+//                  one deliberate exception to "no rendered UI," since the whole feature's point
+//                  is showing the customer something before deciding where they go next.
 //   deactivated -> branded "not active" page
 //   unknown code -> branded "not found" page
 // Total added latency budget: <300ms. Keep this edge-runtime, no client-rendered React page in
-// the active-device path.
+// the active-device path (except the review-filtering exception above).
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ code: string }> }
@@ -87,17 +91,33 @@ export async function GET(
     shouldLogScan = true;
   }
 
+  let scanId: string | null = null;
   if (shouldLogScan) {
     try {
-      await db.insert(scans).values({
-        deviceId: device.id,
-        locationId: device.locationId,
-        employeeId: device.employeeId ?? null,
-        ipHash,
-      });
+      const [scan] = await db
+        .insert(scans)
+        .values({
+          deviceId: device.id,
+          locationId: device.locationId,
+          employeeId: device.employeeId ?? null,
+          ipHash,
+        })
+        .returning({ id: scans.id });
+      scanId = scan?.id ?? null;
     } catch {
       // Scan-logging must never block/break the redirect itself.
     }
+  }
+
+  // Review filtering: send the customer to the star picker instead of straight to the review
+  // platform. The picker page (app/r/[code]/rate/page.tsx) re-reads the location/device fresh
+  // rather than trusting anything carried in the URL — this route only ever passes an opaque
+  // scanId (or nothing, if scan-logging failed/was throttled) so the rating can be tied back to
+  // the specific tap that triggered it when available, never a hard requirement.
+  if (location.reviewFilterEnabled) {
+    const rateUrl = new URL(`/r/${encodeURIComponent(device.code)}/rate`, appUrl);
+    if (scanId) rateUrl.searchParams.set("scanId", scanId);
+    return NextResponse.redirect(rateUrl, { status: 302 });
   }
 
   return NextResponse.redirect(location.googleReviewUrl, { status: 302 });

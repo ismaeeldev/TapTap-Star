@@ -50,6 +50,10 @@ async function seedPricingTiers() {
       priceCents: 0,
       annualPriceCents: null,
       locationLimit: 1,
+      // Client-confirmed: "1 device (matches Free's 1-location cap)" — Free stays a single-
+      // device/single-location tier. Premium/Network intentionally left uncapped (null) — no
+      // device limit was ever requested for the paid tiers.
+      deviceLimit: 1,
       trialDays: null,
       perExtraLocationCents: null,
     },
@@ -59,6 +63,7 @@ async function seedPricingTiers() {
       priceCents: 2500,
       annualPriceCents: Math.round(2500 * 12 * 0.8), // 20% off monthly-equivalent annual total
       locationLimit: 1,
+      deviceLimit: null,
       trialDays: 14,
       perExtraLocationCents: null,
     },
@@ -68,6 +73,7 @@ async function seedPricingTiers() {
       priceCents: 6000,
       annualPriceCents: Math.round(6000 * 12 * 0.8),
       locationLimit: null, // unlimited
+      deviceLimit: null,
       trialDays: 14,
       perExtraLocationCents: 1000, // +$10/mo per location beyond the first
     },
@@ -85,6 +91,7 @@ async function seedPricingTiers() {
         billingUnit: "flat",
         appliesTo: "business",
         locationLimit: tier.locationLimit,
+        deviceLimit: tier.deviceLimit,
         trialDays: tier.trialDays,
         perExtraLocationCents: tier.perExtraLocationCents,
         isActive: true,
@@ -96,6 +103,7 @@ async function seedPricingTiers() {
           priceCents: tier.priceCents,
           annualPriceCents: tier.annualPriceCents,
           locationLimit: tier.locationLimit,
+          deviceLimit: tier.deviceLimit,
           trialDays: tier.trialDays,
           perExtraLocationCents: tier.perExtraLocationCents,
           updatedAt: sql`now()`,
@@ -106,7 +114,7 @@ async function seedPricingTiers() {
       `  pricing_plans: '${row.planKey}' — $${row.priceCents / 100}/mo` +
         (row.annualPriceCents ? ` ($${(row.annualPriceCents / 100).toFixed(2)}/yr)` : "") +
         (row.perExtraLocationCents ? ` +$${row.perExtraLocationCents / 100}/mo per extra location` : "") +
-        `, location_limit=${row.locationLimit ?? "unlimited"}, trial_days=${row.trialDays ?? "none"}`
+        `, location_limit=${row.locationLimit ?? "unlimited"}, device_limit=${row.deviceLimit ?? "unlimited"}, trial_days=${row.trialDays ?? "none"}`
     );
   }
 

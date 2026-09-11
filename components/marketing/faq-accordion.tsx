@@ -25,7 +25,7 @@ function faqItems(tiers: FaqTier[], currency: string) {
   return [
     {
       q: "How does pricing work?",
-      a: `Three tiers: Free (1 location, the basics, forever), Premium at ${premiumPrice}/month (AI-powered draft replies, full analytics, real-time alerts), and Network at ${networkPrice}/month (everything in Premium, unlimited locations, multi-location control center). Premium and Network both include a 14-day free trial — no charge until the trial ends.`,
+      a: `Three tiers: Free (1 location, the basics, forever), Premium at ${premiumPrice}/month (review filtering, full analytics, real-time alerts), and Network at ${networkPrice}/month (everything in Premium, unlimited locations, multi-location control center). Premium and Network both include a 14-day free trial — no charge until the trial ends.`,
     },
     {
       q: "What happens to my devices if I cancel?",
