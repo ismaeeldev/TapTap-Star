@@ -257,11 +257,20 @@ gone stale (still showing all-unchecked) even after the work was actually done.
 - [x] Premium/Network tier signup → correct Stripe subscription, right price + trial
       period. Verified via real signups with Stripe's test card, confirmed `trialing`
       status and exact trial_end via direct Stripe API reads.
-- [ ] **Not tested** — Trial expiration → subscription correctly transitions to a real
-      charge. Needs Stripe test clocks to simulate 14 days passing; hasn't been run.
-      Worth doing before this goes anywhere near real customers, but doesn't block
-      anything else — the trial *creation* side is fully verified, only the *end of
-      trial* transition is unverified.
+- [x] **Now tested** — Trial expiration → subscription correctly transitions to a real
+      charge. Verified using a real Stripe test clock (not simulated): created a
+      customer+subscription mirroring `createStripeSubscriptionForPlan()` exactly
+      (real Premium price, real 14-day trial, real test card attached), advanced the
+      clock 15 days, and confirmed Stripe itself produced a real `paid` invoice
+      ($25.00, `billing_reason: subscription_cycle`) and flipped the subscription to
+      `active`. Then delivered that exact real invoice as a properly-signed
+      `invoice.payment_succeeded` webhook event to the app's own local webhook route
+      (signed with the real `STRIPE_WEBHOOK_SECRET`, same as `stripe.webhooks.
+      constructEvent` expects) and confirmed end-to-end: the account correctly moved
+      `grace_period` → `active`, a matching local `invoices` row was written, and the
+      `payment_recovered` notification fired — exercising the trickiest branch of that
+      handler (a genuine recovery, not a routine renewal). All Stripe test objects and
+      local test rows cleaned up afterward.
 - [x] Plan switch (upgrade/downgrade), all transition types, including the
       Network-with-multiple-locations → capped-tier downgrade edge case (blocked
       correctly, real 400 with a clear message).
@@ -363,11 +372,84 @@ FAQ's live tier prices actually appear, and screenshots confirming the homepage 
 grid, login image, and testimonials all render correctly. Committed and pushed to
 both remotes (`4a78a82`, `0ce23e1`, `21608c3`).
 
+Two further real bugs found and fixed in this same period, outside the numbered PDF
+items, from a client support-chat report ("QR redirects to an inexistent page"):
+- **Root cause of the QR redirect failures: `NEXT_PUBLIC_APP_URL` was `localhost:3000`
+  in the actual production deployment.** Every device's stored QR image (all 412 of
+  them, not just the one reported) had a dead `localhost:3000` link baked in as a
+  result. Fixed the env var in Vercel, added a real (non-localhost) fallback in
+  `lib/qr/index.ts`, and ran a one-time script regenerating every device's QR image
+  against the correct URL — verified by decoding all 412 afterward (zero remaining
+  bad links) and confirming the exact reported device's real redirect target live.
+- **Verification/welcome emails had no real logo (just styled text) and an
+  unclickable-in-some-clients button.** `Layout.tsx` (shared by every email template)
+  now renders a real `<img>` logo via an absolute production URL, and `CtaButton` was
+  rebuilt using the standard "bulletproof button" email pattern (a real `<table><td
+  bgcolor>`, not just inline CSS on an `<a>`) since some clients — Outlook's
+  Word-based rendering engine especially — silently ignore CSS-only button styling.
+
+## 8. Modifications 7 (PDF, Sept 10-11) — items 1-4 built; items 5-9 are scope/business
+   decisions held for the client, not code work
+
+- **Add employee button** — the POST `/api/employees` endpoint already existed (used
+  inline by the claim wizard) but had no direct entry point on the Employees page
+  itself; there was genuinely no way to add an employee ahead of a device assignment.
+  Added a dialog reusing that same endpoint; removed the old "0 employees" dead-end
+  empty state that made the page unreachable in exactly that scenario.
+- **Day-based scan timestamps** — `timeAgo()` previously capped out at raw hours
+  (client's screenshot showed "82h ago"); now rolls over to "Nd Nh ago" past 24 hours.
+- **Sidebar install button always visible** — was only reachable after scrolling to
+  the bottom of the page on any screen with enough content to overflow the viewport,
+  since `mt-auto` only pinned to the bottom of the sidebar's own content, not the
+  screen. Fixed by making the `<aside>` itself viewport-height and sticky.
+- **Agency request admin alert** — the agency-request feature already worked (requests
+  visible at `/admin/agency-requests`, approve/reject already emails the requester),
+  but nothing notified an admin that a *new* request had come in at all. Added a real
+  email alert to `ADMIN_INBOX_EMAIL`, mirroring the existing contact-form-submission
+  pattern. Two real pending requests were found already sitting unreviewed from before
+  this fix existed (predate the alert, won't retroactively trigger one — flagged to
+  the client to check manually).
+- Items 5-9 (AI review replies, a not-yet-purchased `taptapstar.eu` redirect, a full
+  Free/Premium pricing-model restructure, and matching Digifeel/Tapstar feature-for-
+  feature) are business/scope decisions, not bugs — held for explicit client direction
+  before any of them are built, per the same reasoning as the AI-feature scoping
+  history above.
+
+All verified: lint clean, production build clean, every item live-tested end to end
+against a real running server with a real account (real signup, real login, real DB
+writes) — not just UI text/screenshot matching. All test data cleaned up afterward.
+Committed and pushed to both remotes (`d40d5c3`).
+
+## 9. Trial-expiration verification (Sept 11) — the one remaining open testing-checklist
+   item, now closed
+
+Verified using a real Stripe test clock (not simulated, not waited-for): created a
+customer + subscription mirroring `createStripeSubscriptionForPlan()` exactly (real
+Premium price, real 14-day trial, real test card), advanced the clock 15 days, and
+confirmed Stripe itself produced a real `paid` invoice ($25.00,
+`billing_reason: subscription_cycle`) and flipped the subscription to `active`. Then
+delivered that real invoice as a properly-signed `invoice.payment_succeeded` webhook
+event to the app's own local webhook route (signed with the real
+`STRIPE_WEBHOOK_SECRET`) and confirmed end-to-end: the account correctly moved
+`grace_period` → `active`, a matching local `invoices` row was written, and the
+`payment_recovered` notification fired. All Stripe test objects and local test rows
+cleaned up afterward — nothing left in either system.
+
+**Separately flagged (not fixed, needs a manual dashboard step before real launch)**:
+`STRIPE_WEBHOOK_SECRET` in `.env.local` is still the throwaway local-testing value
+noted in `app/api/billing/webhook/route.ts`'s own header comment — a real webhook
+endpoint has not yet been registered in the Stripe Dashboard. Real Stripe events
+(trial-end charges, failed payments, cancellations) have nowhere to land in
+production until that one manual step is done.
+
 ---
 
 *This document is updated as decisions come in and work progresses. All core
 pricing-restructure work (steps 1-6 plus the Network per-location follow-up) is built,
-verified, and live. Modifications 6 (redirect bug, link label, homepage pricing,
-login image) is also built, verified, and live. Remaining: step 7 (AI draft-reply —
-needs its own scoping pass) and the Free-tier device-cap number — both waiting on the
-client, not on more building.*
+verified, and live. Modifications 6 and 7 (items 1-4) are built, verified, and live.
+The QR-redirect root cause and the email logo/button bugs are fixed and live. The
+trial-expiration transition is now verified for real. Remaining, all waiting on the
+client rather than more building: the AI draft-reply feature scope, the Free-tier
+device-cap number, and Modifications 7 items 5-9 — plus one manual, non-code step:
+registering a real webhook endpoint in the Stripe Dashboard before relying on
+production billing events.*
