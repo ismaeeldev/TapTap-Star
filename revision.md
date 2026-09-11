@@ -442,14 +442,54 @@ endpoint has not yet been registered in the Stripe Dashboard. Real Stripe events
 (trial-end charges, failed payments, cancellations) have nowhere to land in
 production until that one manual step is done.
 
+## 10. AI removal, Free device cap, review-filtering feature (Sept 11)
+
+Client's explicit decisions, closing out the two long-open items from §2.3: **"remove
+ai feature not add"** and Free tier device cap = **"1 device (matches Free's
+1-location cap)"**. Plus a new feature request (Sept 7 message): let a business route
+customers by star rating — high ratings to the public review platform, low ratings to
+a private feedback form instead.
+
+- **AI feature fully removed** from all marketing copy (`pricing-tiers.tsx`,
+  `faq-accordion.tsx`) — it was never built and had been flagged out-of-scope multiple
+  times; the pricing table was advertising something that didn't exist. Replaced with
+  "Review filtering," a real, shipped feature (below).
+- **Free tier device cap = 1**, implemented exactly like the existing location cap:
+  new `pricingPlans.deviceLimit` column (additive migration `0004`), enforced at
+  device *activation* (not batch-create — an unassigned device belongs to no account
+  yet). Verified live: a Free account with 1 active device gets a clear, correct
+  error activating a 2nd ("Your Free plan allows up to 1 active device. Upgrade to
+  Premium or Network for more."), shown in the real claim-wizard UI.
+- **Review-filtering feature** (migration `0005`): `locations` gains filter
+  enabled/threshold/destination-type/destination-url columns (all defaulted so every
+  existing location is unaffected by construction); new `private_feedback` table.
+  `/r/[code]` redirects to a new `/r/[code]/rate` star-picker page when a location's
+  filter is on — the one deliberate exception to that route's "no rendered UI, ever"
+  rule — otherwise behaves byte-for-byte identically to before. High ratings do a real
+  client-side redirect to the review platform; low ratings show an inline private
+  feedback form, never posted publicly. Dashboard: a per-location settings panel
+  (Premium/Network only, enforced server-side — verified a Free account gets a real
+  403 on a direct API request, not just a hidden button) and a new
+  `/dashboard/feedback` inbox with a real-time email alert per low-star submission.
+
+Verified end-to-end against a real running server: confirmed zero regression for the
+default (filter-off) path across all 412 existing devices; confirmed a low-star tap
+creates a real DB row and sends a real email; confirmed a high-star tap does a real
+redirect to the real review URL; confirmed the settings panel, feedback inbox, and
+plan-gating all work with real data. Lint clean, full production build clean.
+Committed and pushed to both remotes (`f1818db`).
+
 ---
 
 *This document is updated as decisions come in and work progresses. All core
 pricing-restructure work (steps 1-6 plus the Network per-location follow-up) is built,
 verified, and live. Modifications 6 and 7 (items 1-4) are built, verified, and live.
 The QR-redirect root cause and the email logo/button bugs are fixed and live. The
-trial-expiration transition is now verified for real. Remaining, all waiting on the
-client rather than more building: the AI draft-reply feature scope, the Free-tier
-device-cap number, and Modifications 7 items 5-9 — plus one manual, non-code step:
-registering a real webhook endpoint in the Stripe Dashboard before relying on
-production billing events.*
+trial-expiration transition is verified for real. The AI feature has been removed
+(client decision), the Free-tier device cap is set to 1 and enforced, and the new
+review-filtering feature is built, verified, and live. Remaining, all waiting on the
+client rather than more building: Modifications 7 items 5-9 (the `taptapstar.eu`
+redirect button, the full Free/Premium pricing-model restructure, and matching
+Digifeel/Tapstar feature-for-feature) — plus one manual, non-code step: registering a
+real webhook endpoint in the Stripe Dashboard before relying on production billing
+events.*
