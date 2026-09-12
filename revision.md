@@ -624,15 +624,25 @@ before building it.
 3/5/6. **2 plans instead of 3.** Network merged into Premium — no live accounts were
    ever on the old "premium" or "network" plan_keys (confirmed against production
    before touching anything), so this was a clean data/code change with zero customer
-   migration. Premium now carries what Network used to (unlimited locations, +$10/mo
-   per location beyond the first) at the client's literal stated base, **$25/mo** (not
-   Network's old $60/mo) — confirmed with the client this was the real number, not a
-   loose description. AI-answering and review filtering are both gated to Premium only
-   (server-side, same enforcement pattern as every other plan gate in this app). The
-   `/pricing` page's exact visual layout still awaits the client's referenced video (not
-   sent yet) — this pass keeps it functionally correct (2 real plans, live prices,
-   correct features, a 2-loc/3-loc/4-loc price breakdown on the Premium card) rather
-   than guessing at a redesign that would need redoing once the video arrives.
+   migration. Premium now carries what Network used to (unlimited locations), gated to
+   Premium only same as AI-answering and review filtering (server-side, same enforcement
+   pattern as every other plan gate in this app).
+
+   **Follow-up (Sept 13): the referenced video arrived.** It shows a live slider
+   calculator (MyTapstar Business's own pricing page) where the price PER LOCATION drops
+   as more locations are added — not the flat "+$10/mo per extra location" add-on this
+   was first built with. Rebuilt to match: `components/marketing/premium-location-
+   calculator.tsx` (a slider + numeric stepper, live per-location price, running total,
+   "activate your trial now" banner, "no minimum commitment" copy — matching the video's
+   layout), with the pricing formula isolated into `lib/pricing/per-location-curve.ts`.
+   The video showed 3 data points (4 locs → $22.40/loc, 18 locs → $16.30/loc, 20 locs →
+   $15.90/loc; total = locations × per-location price in all 3) — a straight line
+   through them doesn't fit exactly, so the current curve is a PLACEHOLDER (exponential
+   decay, least-squares fit to all 4 known points including Premium's existing $25 base
+   at 1 location — reproduces the video's numbers essentially exactly) rather than a
+   confirmed formula. The client is getting the real formula/table from their side —
+   only `per-location-curve.ts` needs to change once that arrives; the slider UI itself
+   is done. Currency kept as USD per explicit instruction (video was in EUR).
 
 4. **Hide the camera QR scanner.** "Can I hide this? Dont have a camera.... I maybe use
    this in future but not now." The device-activation "Scan QR code" camera button is
@@ -657,11 +667,15 @@ additional locations. All test accounts/locations/devices/feedback rows deleted
 afterward. Lint clean, type-check clean, full production build clean. Committed and
 pushed to both remotes (`db28f7c`).
 
-**Manual step required:** `OPEN_AI_KEYS` needs to be added to Vercel's production
-environment variables (it currently only exists in local `.env.local`) before AI-reply
-generation will work on the live site — without it, the feature degrades gracefully
-(marks the row `aiReplyStatus: 'failed'`, never blocks the feedback submission itself),
-it just won't actually generate replies until that's done.
+**Manual steps required:**
+- `OPEN_AI_KEYS` needs to be added to Vercel's production environment variables (it
+  currently only exists in local `.env.local`) before AI-reply generation will work on
+  the live site — without it, the feature degrades gracefully (marks the row
+  `aiReplyStatus: 'failed'`, never blocks the feedback submission itself), it just won't
+  actually generate replies until that's done.
+- The per-location pricing curve in `lib/pricing/per-location-curve.ts` is a fitted
+  placeholder, not a confirmed formula — swap in the client's real numbers there once
+  received (see item 3/5/6 above).
 
 ---
 
@@ -675,8 +689,10 @@ Stripe webhook flow are both verified for real. The Free-tier device cap is set 
 enforced, and the review-filtering and AI-answered-reviews features are both built,
 verified, and live (Premium-only). Modifications 7 items 2 and 3 have been dropped per
 explicit client instruction. The domain migration to `www.taptapstar.com` is live and
-confirmed working. Remaining: updating the registered Stripe webhook endpoint's URL to
-match the new domain, adding `OPEN_AI_KEYS` to Vercel's production environment, and
-redoing the `/pricing` page's visual layout once the client's referenced video arrives
-(all manual/pending, not code) — everything else is either built and verified, or
-intentionally dropped.*
+confirmed working. The `/pricing` page's per-location slider now matches the client's
+reference video's layout exactly, though its pricing curve is still a fitted placeholder
+pending the client's exact formula/table. Remaining: updating the registered Stripe
+webhook endpoint's URL to match the new domain, adding `OPEN_AI_KEYS` to Vercel's
+production environment, and swapping in the real per-location pricing curve once
+received (all manual/pending, not code) — everything else is either built and verified,
+or intentionally dropped.*
