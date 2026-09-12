@@ -1,7 +1,7 @@
 // Shared /dashboard/billing data source — mirrors lib/queries/agency.ts's pattern.
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { accounts, invoices, subscriptions } from "@/lib/db/schema";
+import { accounts, invoices, locations, subscriptions } from "@/lib/db/schema";
 import { getAgencyManagedBusinessCount, getPricingPlanByKey } from "@/lib/stripe/pricing";
 
 export type BillingOverview = {
@@ -53,15 +53,30 @@ export async function getBillingOverview(accountId: string): Promise<BillingOver
     orderBy: [desc(subscriptions.createdAt)],
   });
 
-  // Network's per-location increment (revision.md §2.1/§2.3) means the true billed amount for
-  // a business account isn't always just plan.priceCents flat — syncNetworkLocationQuantity
-  // keeps subscriptions.amountCents accurate (base + N × perExtraLocationCents) for exactly
-  // this reason, so prefer that real synced total when a subscription row exists, falling back
-  // to the flat plan price only for Free (no subscription at all) or a not-yet-synced state.
-  const amountCents =
-    account.type === "agency"
-      ? (managedBusinessCount ?? 0) * plan.priceCents
-      : (sub?.amountCents ?? plan.priceCents);
+  // Modifications 9 (client PDF, item 7): "I want prices to be updated when changed. there it
+  // still says 29.90$ instead of the actual one." Previously read the CACHED
+  // subscriptions.amountCents column, which is only ever written at subscription-create time or
+  // by a quantity-sync trigger (a new location added/removed, an agency's managed-business count
+  // changing) — never when an admin simply edits a plan's price via /admin/billing-settings. That
+  // left this page showing whatever price was active when the account's subscription was first
+  // created, indefinitely, even after the plan's real price changed. Now computed live from
+  // plan.priceCents (Network's per-location increment likewise read live from
+  // plan.perExtraLocationCents × the account's actual current location count, not a cached
+  // quantity) so a price edit shows up here immediately, with no dependency on any sync job or
+  // webhook having run since.
+  let amountCents: number;
+  if (account.type === "agency") {
+    amountCents = (managedBusinessCount ?? 0) * plan.priceCents;
+  } else if (account.planKey === "network" && plan.perExtraLocationCents) {
+    const [{ count: locationCount }] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(locations)
+      .where(eq(locations.accountId, accountId));
+    const extraLocations = Math.max(0, locationCount - 1);
+    amountCents = plan.priceCents + extraLocations * plan.perExtraLocationCents;
+  } else {
+    amountCents = plan.priceCents;
+  }
   const invoiceRows = await db.query.invoices.findMany({
     where: eq(invoices.accountId, accountId),
     orderBy: [desc(invoices.createdAt)],

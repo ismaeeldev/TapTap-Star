@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { devices, privateFeedback } from "@/lib/db/schema";
+import { accounts, devices, privateFeedback } from "@/lib/db/schema";
 import { privateFeedbackSchema } from "@/lib/validation";
 import { notify } from "@/lib/email/notify";
+import { generateReviewReply } from "@/lib/ai/reply";
 
 // POST /api/public/feedback — no auth. Writes a real private_feedback row for a low-star
 // submission (never posted publicly, never touches the review platform — the business owner
@@ -63,6 +64,38 @@ export async function POST(request: Request) {
     } catch (err) {
       // Notification failures must never surface as a submission failure to the customer.
       console.error("[public/feedback] alert notification failed:", err);
+    }
+
+    // Modifications 9 (client PDF, items 1/6): AI-answered reviews, Premium-only (server-side
+    // gate — mirrors review filtering's own plan check, never trust a client-side toggle alone),
+    // and only when this location has turned it on and this rating meets the owner's own
+    // threshold. Fire-and-forget-ish: awaited so aiReplyStatus is accurate in the same response
+    // cycle, but any failure here must never fail (or even slow down the customer's view of) the
+    // submission itself — the draft is a dashboard-only convenience for the owner, not something
+    // the customer is waiting on.
+    const account = await db.query.accounts.findFirst({ where: eq(accounts.id, device.accountId) });
+    const aiEligible =
+      (account?.planKey === "premium" || account?.planKey === "network") &&
+      location.aiReplyEnabled &&
+      rating >= location.aiReplyThreshold;
+    if (aiEligible) {
+      try {
+        const draft = await generateReviewReply({
+          businessName: account!.name,
+          rating,
+          comment: comment || null,
+        });
+        await db
+          .update(privateFeedback)
+          .set({ aiReplyStatus: "drafted", aiReplyDraft: draft })
+          .where(eq(privateFeedback.id, row.id));
+      } catch (err) {
+        console.error(`[public/feedback] AI reply generation failed for feedback ${row.id}:`, err);
+        await db
+          .update(privateFeedback)
+          .set({ aiReplyStatus: "failed" })
+          .where(eq(privateFeedback.id, row.id));
+      }
     }
 
     return NextResponse.json({ ok: true, id: row.id }, { status: 201 });

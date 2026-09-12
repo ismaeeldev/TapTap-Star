@@ -6,7 +6,7 @@ import { accounts, locations } from "@/lib/db/schema";
 import { requireSession, requireActiveAccount, authErrorResponse } from "@/lib/auth/rbac";
 import { locationSchema } from "@/lib/validation";
 import { getPricingPlanByKey } from "@/lib/stripe/pricing";
-import { syncNetworkLocationQuantity } from "@/lib/stripe/subscription";
+import { syncPremiumLocationQuantity } from "@/lib/stripe/subscription";
 
 // GET /api/locations — list the session account's locations (used by the claim wizard's
 // location-picker step and later dashboard screens).
@@ -41,12 +41,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // Modifications 5 pricing restructure (revision.md §3.4/step 6) — location cap for
-    // Free/Premium tiers (locationLimit: 1). Network is unlimited (locationLimit: null), and so
-    // is the legacy "default" plan every pre-restructure account still points at
-    // (locationLimit: null from step 1's additive migration) — this check is a genuine no-op
-    // for every account that existed before this pricing work, by construction, not a special
-    // case that needs its own branch.
+    // Modifications 5 pricing restructure (revision.md §3.4/step 6) — location cap for the Free
+    // tier (locationLimit: 1). Premium is unlimited since the Modifications 9 Network merge
+    // (locationLimit: null), and so is the legacy "default" plan every pre-restructure account
+    // still points at (locationLimit: null from step 1's additive migration) — this check is a
+    // genuine no-op for every account that existed before this pricing work, by construction,
+    // not a special case that needs its own branch.
     const account = await db.query.accounts.findFirst({
       where: eq(accounts.id, session.user.accountId),
     });
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
           {
             message: `Your ${plan.name} plan allows up to ${plan.locationLimit} location${
               plan.locationLimit === 1 ? "" : "s"
-            }. Upgrade to Network for unlimited locations.`,
+            }. Upgrade to Premium for unlimited locations.`,
           },
           { status: 403 }
         );
@@ -82,13 +82,13 @@ export async function POST(request: Request) {
       })
       .returning();
 
-    // Network tier's "+$10/mo per location beyond the first" (revision.md §2.1/§2.3) — keeps
+    // Premium tier's "+$10/mo per location beyond the first" (revision.md §2.1/§2.3) — keeps
     // the real Stripe subscription's per-location item in sync with the new location count.
-    // A no-op for every plan except network (see syncNetworkLocationQuantity's own doc
+    // A no-op for every plan except premium (see syncPremiumLocationQuantity's own doc
     // comment); never allowed to fail the location creation itself, same "Stripe sync must not
     // block the primary user action" pattern used at signup (app/api/auth/signup/route.ts).
     try {
-      await syncNetworkLocationQuantity(session.user.accountId);
+      await syncPremiumLocationQuantity(session.user.accountId);
     } catch (err) {
       console.error(
         `[locations] Stripe location-quantity sync failed for account ${session.user.accountId} — location created locally, billing sync should be investigated/retried.`,

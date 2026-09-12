@@ -16,21 +16,24 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// Modifications 9 (client PDF, item 2): "I want this order to be Overview - Devices - Locations
+// - Employees - Analytics - Reviews (change feedback name for this one) - Billing - Agency
+// Settings and support (IN THIS ORDER)." Reordered to match exactly, and "Feedback" renamed to
+// "Reviews" per the same item (still points at /dashboard/feedback — only the label changed, not
+// the route, to avoid a link-rot pass across every place that already links there).
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Overview", icon: LayoutGrid, exact: true, tourId: "nav-dashboard" },
   { href: "/dashboard/devices", label: "Devices", icon: Radio, tourId: "nav-devices" },
   { href: "/dashboard/locations", label: "Locations", icon: MapPin, tourId: "nav-locations" },
   { href: "/dashboard/employees", label: "Employees", icon: Users, tourId: "nav-employees" },
+  { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3, tourId: "nav-analytics" },
+  { href: "/dashboard/feedback", label: "Reviews", icon: MessageSquareWarning, tourId: "nav-feedback" },
+  { href: "/dashboard/billing", label: "Billing", icon: CreditCard, tourId: "nav-billing" },
   // Client-requested (Modifications 3 PDF, item 1): "Agency access is not a setting, is an
   // option for some clients, so I don't think that this should be in Settings." — moved out of
   // the Settings page into its own dedicated sidebar item (both a business account's request
   // panel and an approved agency's status/Clients pointer now live at /dashboard/agency).
   { href: "/dashboard/agency", label: "Agency", icon: Building2, tourId: "nav-agency" },
-  { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3, tourId: "nav-analytics" },
-  // Review-filtering feature (client feature request, Sept 2026 round) — the private-feedback
-  // inbox ("view and manage all private feedback received").
-  { href: "/dashboard/feedback", label: "Feedback", icon: MessageSquareWarning, tourId: "nav-feedback" },
-  { href: "/dashboard/billing", label: "Billing", icon: CreditCard, tourId: "nav-billing" },
   { href: "/dashboard/settings", label: "Settings", icon: Settings, tourId: "nav-settings" },
   // Client-requested (Modifications 3 PDF, item 8): "I want a support option so people can
   // contact me if any problem" — clarified as the business owner reaching Taptapstar's own

@@ -24,16 +24,17 @@ import { signupSchema, type SignupInput } from "@/lib/validation";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
-type PlanKey = "free" | "premium" | "network";
+// Modifications 9 (client PDF, item 3): "I want only 2 plans instead of 3." Network merged into
+// Premium (revision.md's Modifications 9 entry).
+type PlanKey = "free" | "premium";
 
 const PLAN_INFO: Record<PlanKey, { name: string; blurb: string }> = {
   free: { name: "Free", blurb: "$0/mo forever, 1 location" },
-  premium: { name: "Premium", blurb: "$25/mo, 14-day free trial" },
-  network: { name: "Network", blurb: "$60/mo, unlimited locations, 14-day free trial" },
+  premium: { name: "Premium", blurb: "$25/mo, unlimited locations, 14-day free trial" },
 };
 
 function isPlanKey(value: string | null): value is PlanKey {
-  return value === "free" || value === "premium" || value === "network";
+  return value === "free" || value === "premium";
 }
 
 export default function SignupPage() {
@@ -60,7 +61,7 @@ function SignupPageContent() {
     formState: { errors },
   } = useForm<SignupInput>({ resolver: zodResolver(signupSchema) });
 
-  const requiresCard = planKey === "premium" || planKey === "network";
+  const requiresCard = planKey === "premium";
 
   const onSubmit = async (values: SignupInput) => {
     if (requiresCard && !paymentMethodId) {
@@ -126,7 +127,7 @@ function SignupPageContent() {
               (that's /pricing, which is where these links come from). */}
           <div className="space-y-1.5">
             <Label>Plan</Label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {(Object.keys(PLAN_INFO) as PlanKey[]).map((key) => {
                 const active = planKey === key;
                 return (

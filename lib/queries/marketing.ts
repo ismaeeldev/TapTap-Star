@@ -51,16 +51,19 @@ type PublicTier = {
   annualPriceCents: number | null;
   locationLimit: number | null;
   trialDays: number | null;
+  perExtraLocationCents: number | null;
 };
 
+// Modifications 9 (client PDF, item 3): "I want only 2 plans instead of 3." Network merged into
+// Premium (revision.md's Modifications 9 entry) — Premium now carries Network's old mechanics
+// (unlimited locations, +$10/mo per extra location) at the client's stated $25/mo base.
 const FALLBACK_TIERS: PublicTier[] = [
-  { planKey: "free", name: "Free", priceCents: 0, annualPriceCents: null, locationLimit: 1, trialDays: null },
-  { planKey: "premium", name: "Premium", priceCents: 2500, annualPriceCents: 24000, locationLimit: 1, trialDays: 14 },
-  { planKey: "network", name: "Network", priceCents: 6000, annualPriceCents: 57600, locationLimit: null, trialDays: 14 },
+  { planKey: "free", name: "Free", priceCents: 0, annualPriceCents: null, locationLimit: 1, trialDays: null, perExtraLocationCents: null },
+  { planKey: "premium", name: "Premium", priceCents: 2500, annualPriceCents: 24000, locationLimit: null, trialDays: 14, perExtraLocationCents: 1000 },
 ];
 
 export async function getPublicPricingTiers(): Promise<PublicTier[]> {
-  const planKeys = ["free", "premium", "network"] as const;
+  const planKeys = ["free", "premium"] as const;
   try {
     const rows = await db.query.pricingPlans.findMany({
       where: (p, { inArray }) => inArray(p.planKey, planKeys),
@@ -71,8 +74,8 @@ export async function getPublicPricingTiers(): Promise<PublicTier[]> {
       );
       return FALLBACK_TIERS;
     }
-    // Return in a fixed, deliberate order (Free, Premium, Network) — DB row order is not
-    // guaranteed, and the page's layout depends on this exact left-to-right order.
+    // Return in a fixed, deliberate order (Free, Premium) — DB row order is not guaranteed, and
+    // the page's layout depends on this exact left-to-right order.
     return planKeys.map((key) => rows.find((r) => r.planKey === key)!);
   } catch (err) {
     console.error("[getPublicPricingTiers] DB read failed, using fallback:", err);

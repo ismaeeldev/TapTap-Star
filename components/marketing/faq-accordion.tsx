@@ -16,16 +16,17 @@ type FaqTier = { planKey: string; priceCents: number };
 // restructure shipped (the homepage/FAQ pages were a known follow-up, not part of that step —
 // see the removed comment on pricing-tiers.tsx). Still reads LIVE prices via the `tiers` prop
 // (server-fetched by both call sites), never a hardcoded figure — same rule as PricingTiers.
+//
+// Modifications 9 (client PDF, item 3): "I want only 2 plans instead of 3." Network merged into
+// Premium (revision.md's Modifications 9 entry) — back to two tiers.
 function faqItems(tiers: FaqTier[], currency: string) {
   const premium = tiers.find((t) => t.planKey === "premium");
-  const network = tiers.find((t) => t.planKey === "network");
   const premiumPrice = premium ? formatPriceCents(premium.priceCents, currency) : "$25.00";
-  const networkPrice = network ? formatPriceCents(network.priceCents, currency) : "$60.00";
 
   return [
     {
       q: "How does pricing work?",
-      a: `Three tiers: Free (1 location, the basics, forever), Premium at ${premiumPrice}/month (review filtering, full analytics, real-time alerts), and Network at ${networkPrice}/month (everything in Premium, unlimited locations, multi-location control center). Premium and Network both include a 14-day free trial — no charge until the trial ends.`,
+      a: `Two tiers: Free (1 location, the basics, forever) and Premium at ${premiumPrice}/month (unlimited locations, AI-assisted review replies, review filtering, full analytics, real-time alerts — plus a per-location add-on beyond the first). Premium includes a 14-day free trial — no charge until the trial ends.`,
     },
     {
       q: "What happens to my devices if I cancel?",
@@ -37,7 +38,7 @@ function faqItems(tiers: FaqTier[], currency: string) {
     },
     {
       q: "Can I manage more than one location?",
-      a: "Free and Premium include 1 location each. Network is built for multi-location businesses — unlimited locations, each with its own devices, employees, and analytics, all from one dashboard.",
+      a: "Free includes 1 location. Premium is built for multi-location businesses — unlimited locations, each with its own devices, employees, and analytics, all from one dashboard, with a per-location add-on beyond the first.",
     },
     {
       q: "How is the employee leaderboard calculated?",

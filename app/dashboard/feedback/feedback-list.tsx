@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Star } from "lucide-react";
+import { Sparkles, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { toast } from "@/lib/toast";
@@ -17,6 +17,8 @@ type FeedbackRow = {
   locationName: string;
   deviceCode: string | null;
   employeeName: string | null;
+  aiReplyStatus: "idle" | "generating" | "drafted" | "failed";
+  aiReplyDraft: string | null;
 };
 
 function Stars({ rating }: { rating: number }) {
@@ -89,6 +91,37 @@ export function FeedbackList({ initialRows }: { initialRows: FeedbackRow[] }) {
             <p className="mt-2 text-caption text-text-muted">
               Contact: {[r.contactName, r.contactEmail].filter(Boolean).join(" · ")}
             </p>
+          )}
+
+          {/* Modifications 9 (client PDF, item 1): AI-answered reviews — a drafted reply, never
+              auto-sent (no guaranteed channel back to an anonymous customer). The owner copies
+              and sends it themselves wherever they'd normally respond. */}
+          {r.aiReplyStatus === "drafted" && r.aiReplyDraft && (
+            <div className="mt-3 rounded-md border border-brand/30 bg-brand-subtle p-3">
+              <p className="flex items-center gap-1.5 text-caption font-medium text-brand">
+                <Sparkles className="size-3.5" />
+                AI-drafted reply
+              </p>
+              <p className="mt-1.5 text-body-sm text-text-primary">{r.aiReplyDraft}</p>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="mt-2"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(r.aiReplyDraft!);
+                    toast.success("Reply copied to clipboard");
+                  } catch {
+                    toast.error("Couldn't copy — select and copy the text manually");
+                  }
+                }}
+              >
+                Copy reply
+              </Button>
+            </div>
+          )}
+          {r.aiReplyStatus === "failed" && (
+            <p className="mt-2 text-caption text-danger">AI reply generation failed for this one.</p>
           )}
         </div>
       ))}

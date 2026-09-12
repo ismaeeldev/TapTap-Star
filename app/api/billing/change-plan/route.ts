@@ -52,11 +52,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "You're already on this plan" }, { status: 400 });
     }
 
-    if (
-      account.planKey === "free" &&
-      (newPlanKey === "premium" || newPlanKey === "network") &&
-      !paymentMethodId
-    ) {
+    if (account.planKey === "free" && newPlanKey === "premium" && !paymentMethodId) {
       return NextResponse.json(
         {
           message: "A payment method is required to switch to a paid plan",

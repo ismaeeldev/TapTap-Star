@@ -15,10 +15,16 @@ import { ManualActivateForm } from "./manual-activate-form";
 // device batches / anyone without a working camera, reachable via the small link below the
 // scanner button. qr-scanner (nimiq/qr-scanner) is loaded dynamically so its ~50KB decode engine
 // never ships in the initial bundle for users who never open the scanner.
+//
+// Modifications 9 (client PDF, item 4): "Can I hide this? Dont have a camera.... I maybe use
+// this in future but not now" — the "Scan QR code" camera button is hidden; manual code entry is
+// now the only, always-visible way to activate a device. Kept as a one-line toggle rather than
+// deleting the scanner code, since the client explicitly said they may want it back later.
+const SHOW_CAMERA_SCAN = false;
 export function ActivateDeviceWidget() {
   const router = useRouter();
   const [scanOpen, setScanOpen] = useState(false);
-  const [showManual, setShowManual] = useState(false);
+  const [showManual, setShowManual] = useState(!SHOW_CAMERA_SCAN);
   const videoRef = useRef<HTMLVideoElement>(null);
   const scannerRef = useRef<QrScannerType | null>(null);
 
@@ -78,25 +84,29 @@ export function ActivateDeviceWidget() {
 
   return (
     <div className="flex flex-col items-center gap-3">
-      <Button type="button" onClick={() => setScanOpen(true)}>
-        <Camera className="size-4" />
-        Scan QR code
-      </Button>
+      {SHOW_CAMERA_SCAN && (
+        <>
+          <Button type="button" onClick={() => setScanOpen(true)}>
+            <Camera className="size-4" />
+            Scan QR code
+          </Button>
 
-      <Dialog open={scanOpen} onOpenChange={setScanOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Scan a device&apos;s QR code</DialogTitle>
-          </DialogHeader>
-          <div className="overflow-hidden rounded-lg bg-black">
-            <video ref={videoRef} className="aspect-square w-full object-cover" muted playsInline />
-          </div>
-          <p className="text-center text-caption text-text-muted">
-            Point your camera at the device&apos;s QR code — it activates automatically once
-            recognized.
-          </p>
-        </DialogContent>
-      </Dialog>
+          <Dialog open={scanOpen} onOpenChange={setScanOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Scan a device&apos;s QR code</DialogTitle>
+              </DialogHeader>
+              <div className="overflow-hidden rounded-lg bg-black">
+                <video ref={videoRef} className="aspect-square w-full object-cover" muted playsInline />
+              </div>
+              <p className="text-center text-caption text-text-muted">
+                Point your camera at the device&apos;s QR code — it activates automatically once
+                recognized.
+              </p>
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
 
       {showManual ? (
         <ManualActivateForm />

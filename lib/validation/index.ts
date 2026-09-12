@@ -15,7 +15,9 @@ export const signupSchema = z.object({
     .string()
     .min(8, "Password must be at least 8 characters")
     .max(72, "Password is too long"),
-  planKey: z.enum(["free", "premium", "network"]).optional(),
+  // Modifications 9 (client PDF, item 3): "network" retired as a selectable plan — merged into
+  // "premium" (revision.md's Modifications 9 entry).
+  planKey: z.enum(["free", "premium"]).optional(),
   cadence: z.enum(["monthly", "annual"]).optional(),
   paymentMethodId: z.string().trim().min(1).optional(),
 });
@@ -63,7 +65,7 @@ export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 // for a Free -> paid transition, enforced in the route handler (same pattern as signup's
 // planKey/paymentMethodId — see that schema's own comment) since Free never has a card on file.
 export const changePlanSchema = z.object({
-  newPlanKey: z.enum(["free", "premium", "network"]),
+  newPlanKey: z.enum(["free", "premium"]),
   cadence: z.enum(["monthly", "annual"]).default("monthly"),
   paymentMethodId: z.string().trim().min(1).optional(),
 });
@@ -279,6 +281,12 @@ export const reviewFilterSettingsSchema = z
     reviewFilterThreshold: z.coerce.number().int().min(1).max(5),
     reviewDestinationType: z.enum(["google", "custom"]),
     reviewDestinationUrl: z.url("Enter a valid URL").optional().or(z.literal("")),
+    // Modifications 9 (client PDF, item 1) — AI-answered reviews, a separate on/off + threshold
+    // from the review-filter settings above (the client described this as its own setting: "the
+    // rating that owner selects"). Optional so the existing PATCH from before this feature still
+    // validates unchanged if some older client code ever omits these fields.
+    aiReplyEnabled: z.boolean().optional(),
+    aiReplyThreshold: z.coerce.number().int().min(1).max(5).optional(),
   })
   .refine(
     (data) => data.reviewDestinationType !== "custom" || !!data.reviewDestinationUrl,

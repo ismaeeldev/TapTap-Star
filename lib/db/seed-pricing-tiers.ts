@@ -6,6 +6,16 @@
 // new tier is a separate, deliberate decision for a later step (revision.md §3.4), not
 // something this script does automatically.
 //
+// Modifications 9 (client PDF, items 3/5/6): "I want only 2 plans instead of 3." /
+// "in the Premium option I want it to be from 25$/month, multiple location, ai answering,
+// review filtering... option to know prices for 2 loc, 3 loc, 4 loc." Network is merged into
+// Premium — the "network" plan_key row is retired (deactivated, not deleted, so any historical
+// FK reference in subscriptions/accounts still resolves), and "premium" now carries Network's
+// old mechanics (unlimited locations, +$10/mo per extra location) at the client's stated $25/mo
+// base instead of Network's old $60/mo. No live accounts were ever on "premium" or "network"
+// (confirmed against production before this change), so this is a clean data change with zero
+// customer migration to do.
+//
 // Idempotent: uses onConflictDoUpdate keyed on the unique plan_key index, so running this
 // more than once (e.g. after tweaking a price before the client confirms it) safely
 // updates the existing rows instead of erroring or duplicating them.
@@ -57,22 +67,14 @@ async function seedPricingTiers() {
       trialDays: null,
       perExtraLocationCents: null,
     },
+    // Modifications 9: Premium now carries what Network used to (unlimited locations,
+    // +$10/mo per extra location) at the client's stated $25/mo base — see header comment.
     {
       planKey: "premium",
       name: "Premium",
       priceCents: 2500,
       annualPriceCents: Math.round(2500 * 12 * 0.8), // 20% off monthly-equivalent annual total
-      locationLimit: 1,
-      deviceLimit: null,
-      trialDays: 14,
-      perExtraLocationCents: null,
-    },
-    {
-      planKey: "network",
-      name: "Network",
-      priceCents: 6000,
-      annualPriceCents: Math.round(6000 * 12 * 0.8),
-      locationLimit: null, // unlimited
+      locationLimit: null, // unlimited (was 1 before the Network merge)
       deviceLimit: null,
       trialDays: 14,
       perExtraLocationCents: 1000, // +$10/mo per location beyond the first
@@ -117,6 +119,16 @@ async function seedPricingTiers() {
         `, location_limit=${row.locationLimit ?? "unlimited"}, device_limit=${row.deviceLimit ?? "unlimited"}, trial_days=${row.trialDays ?? "none"}`
     );
   }
+
+  // Modifications 9: "network" is retired as a selectable plan — deactivate rather than delete,
+  // so subscriptions/accounts rows that historically referenced it (none in production today,
+  // but this keeps the row's FK-like string reference resolvable if that ever changes) still
+  // find a real row via getPricingPlanByKey.
+  await db
+    .update(pricingPlans)
+    .set({ isActive: false, updatedAt: sql`now()` })
+    .where(sql`${pricingPlans.planKey} = 'network'`);
+  console.log("  pricing_plans: 'network' marked inactive (merged into 'premium')");
 
   console.log("Done. Existing 'default' plan row untouched — see this file's header comment.");
 }

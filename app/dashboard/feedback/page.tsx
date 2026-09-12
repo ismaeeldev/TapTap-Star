@@ -57,6 +57,8 @@ export default async function FeedbackPage() {
           locationName: r.location?.name ?? "Unknown location",
           deviceCode: r.device?.code ?? null,
           employeeName: r.device?.employee?.name ?? null,
+          aiReplyStatus: r.aiReplyStatus,
+          aiReplyDraft: r.aiReplyDraft,
         }))}
       />
     </div>

@@ -1,15 +1,18 @@
 "use client";
 
 // Modifications 5 pricing restructure (revision.md §3.3) — replaces the old single flat-price
-// PricingCard on the standalone /pricing route with a real 3-tier comparison, matching Digifeel's
-// plan STRUCTURE and functionality (client's own words: "Don't copy prices, just
+// PricingCard on the standalone /pricing route with a real multi-tier comparison, matching
+// Digifeel's plan STRUCTURE and functionality (client's own words: "Don't copy prices, just
 // functionabilities") — not Digifeel's literal copy/prices, and not Digifeel's review-management
 // feature set verbatim; translated into Taptapstar's actual product (devices/locations/analytics),
 // per revision.md §2.2.
 //
-// PricingCard (components/marketing/pricing-card.tsx) is untouched and still used on the
-// homepage + kept for now — rewriting those to the 3-tier model is a separate follow-up, not
-// bundled into this step (see revision.md's change log).
+// Modifications 9 (client PDF, item 3): "I want only 2 plans instead of 3 and I want it to be
+// like in the video." Network merged into Premium (revision.md's Modifications 9 entry) — this
+// is now a 2-column Free/Premium comparison instead of 3. The client's referenced video hadn't
+// arrived as of this pass, so the layout below is a functional placeholder matching the new
+// 2-plan data shape (nothing crashes, prices/features are all correct and live) rather than a
+// redesign to match the video's exact visual layout — revisit once the video is sent.
 import * as React from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -27,27 +30,26 @@ type Tier = {
   annualPriceCents: number | null;
   locationLimit: number | null;
   trialDays: number | null;
+  perExtraLocationCents?: number | null;
 };
 
-type FeatureRow = { label: string; free: boolean; premium: boolean; network: boolean };
+type FeatureRow = { label: string; free: boolean; premium: boolean };
 
 // Feature split per revision.md §2.2 — Taptapstar's own product, not Digifeel's literal
 // review-management feature list.
 //
-// "AI-powered draft reply suggestions" removed (client's explicit instruction, Sept 2026 round —
-// see revision.md's AI-feature scoping history): never built, was flagged out-of-scope multiple
-// times, and this row was advertising a feature that doesn't exist. Replaced with review
-// filtering, a real, shipped Premium/Network feature (the star-rating routing feature) —
-// FREE_DEVICE_LIMIT below documents the matching Free-tier device cap decision from the same
-// round.
+// Modifications 9 (client PDF, items 1/6): AI-answering is back in scope (client's explicit
+// re-request, overriding the earlier "remove ai feature not add" decision — see revision.md's
+// Modifications 9 entry) and, per item 6 ("AI answering and Review filtering I only want to be
+// available for Premium Plan"), gated to Premium only, same as review filtering already was.
 const FEATURES: FeatureRow[] = [
-  { label: "1 location", free: true, premium: true, network: true },
-  { label: "Unlimited locations", free: false, premium: false, network: true },
-  { label: "Basic analytics dashboard", free: true, premium: true, network: true },
-  { label: "Full analytics (location breakdown)", free: false, premium: true, network: true },
-  { label: "Review filtering (route low ratings to private feedback)", free: false, premium: true, network: true },
-  { label: "Real-time scan alerts", free: false, premium: true, network: true },
-  { label: "Multi-location control center", free: false, premium: false, network: true },
+  { label: "1 location", free: true, premium: true },
+  { label: "Unlimited locations", free: false, premium: true },
+  { label: "Basic analytics dashboard", free: true, premium: true },
+  { label: "Full analytics (location breakdown)", free: false, premium: true },
+  { label: "AI-powered review replies", free: false, premium: true },
+  { label: "Review filtering (route low ratings to private feedback)", free: false, premium: true },
+  { label: "Real-time scan alerts", free: false, premium: true },
 ];
 
 function locationSummary(limit: number | null) {
@@ -59,9 +61,8 @@ export function PricingTiers({ tiers }: { tiers: Tier[] }) {
   const [annual, setAnnual] = React.useState(false);
   const free = tiers.find((t) => t.planKey === "free");
   const premium = tiers.find((t) => t.planKey === "premium");
-  const network = tiers.find((t) => t.planKey === "network");
 
-  if (!free || !premium || !network) return null;
+  if (!free || !premium) return null;
 
   function priceDisplay(tier: Tier) {
     if (tier.priceCents === 0) return { amount: "Free", suffix: "forever" };
@@ -105,7 +106,7 @@ export function PricingTiers({ tiers }: { tiers: Tier[] }) {
         whileInView="visible"
         viewport={marketingInView}
         variants={staggerContainer}
-        className="grid gap-6 md:grid-cols-3"
+        className="grid gap-6 md:grid-cols-2"
       >
         {/* Free */}
         <motion.div variants={fadeUp} className="rounded-lg border border-border-default bg-bg-card p-8">
@@ -132,10 +133,24 @@ export function PricingTiers({ tiers }: { tiers: Tier[] }) {
             <div className="flex h-full flex-col p-8">
               <TierHeader
                 name="Premium"
-                description="Protect your reputation and grow faster with review filtering."
+                description="AI-assisted replies, review filtering, and unlimited locations."
                 priceDisplay={priceDisplay(premium)}
               />
               <p className="mt-1 text-body-sm text-text-muted">{locationSummary(premium.locationLimit)}</p>
+              {/* Modifications 9 (client PDF, item 5): "the option to know prices for 2 loc, 3
+                  loc, 4 loc....." — per-location pricing spelled out directly on the card. */}
+              {premium.perExtraLocationCents ? (
+                <p className="mt-1 text-caption text-text-muted">
+                  +{formatPriceCents(premium.perExtraLocationCents, "usd").replace(/\.00$/, "")}/mo per
+                  extra location — e.g. 2 locations:{" "}
+                  {formatPriceCents(premium.priceCents + premium.perExtraLocationCents, "usd").replace(/\.00$/, "")}
+                  /mo, 3 locations:{" "}
+                  {formatPriceCents(premium.priceCents + premium.perExtraLocationCents * 2, "usd").replace(/\.00$/, "")}
+                  /mo, 4 locations:{" "}
+                  {formatPriceCents(premium.priceCents + premium.perExtraLocationCents * 3, "usd").replace(/\.00$/, "")}
+                  /mo
+                </p>
+              ) : null}
               {premium.trialDays && (
                 <p className="mt-1 text-caption text-brand">{premium.trialDays}-day free trial</p>
               )}
@@ -145,23 +160,6 @@ export function PricingTiers({ tiers }: { tiers: Tier[] }) {
               <FeatureList tierKey="premium" />
             </div>
           </AnimatedGradientBorder>
-        </motion.div>
-
-        {/* Network */}
-        <motion.div variants={fadeUp} className="rounded-lg border border-border-default bg-bg-card p-8">
-          <TierHeader
-            name="Network"
-            description="All the growth tools to manage multiple locations."
-            priceDisplay={priceDisplay(network)}
-          />
-          <p className="mt-1 text-body-sm text-text-muted">{locationSummary(network.locationLimit)}</p>
-          {network.trialDays && (
-            <p className="mt-1 text-caption text-brand">{network.trialDays}-day free trial</p>
-          )}
-          <Button asChild variant="secondary" size="hero" className="mt-6 w-full">
-            <Link href="/signup?plan=network">Get {network.trialDays} days free</Link>
-          </Button>
-          <FeatureList tierKey="network" />
         </motion.div>
       </motion.div>
     </div>
@@ -191,7 +189,7 @@ function TierHeader({
   );
 }
 
-function FeatureList({ tierKey }: { tierKey: "free" | "premium" | "network" }) {
+function FeatureList({ tierKey }: { tierKey: "free" | "premium" }) {
   return (
     <ul className="mt-6 space-y-3 border-t border-border-default pt-6">
       {FEATURES.map((f) => {

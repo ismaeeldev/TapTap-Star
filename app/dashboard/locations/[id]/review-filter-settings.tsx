@@ -22,6 +22,8 @@ type Settings = {
   reviewFilterThreshold: number;
   reviewDestinationType: "google" | "custom";
   reviewDestinationUrl: string | null;
+  aiReplyEnabled: boolean;
+  aiReplyThreshold: number;
 };
 
 // Business-owner-facing review-filtering settings panel — client feature request, Sept 2026
@@ -42,6 +44,8 @@ export function ReviewFilterSettings({
   const [threshold, setThreshold] = React.useState(initial.reviewFilterThreshold);
   const [destType, setDestType] = React.useState(initial.reviewDestinationType);
   const [destUrl, setDestUrl] = React.useState(initial.reviewDestinationUrl ?? "");
+  const [aiEnabled, setAiEnabled] = React.useState(initial.aiReplyEnabled);
+  const [aiThreshold, setAiThreshold] = React.useState(initial.aiReplyThreshold);
   const [submitting, setSubmitting] = React.useState(false);
 
   async function handleSave() {
@@ -55,6 +59,8 @@ export function ReviewFilterSettings({
           reviewFilterThreshold: threshold,
           reviewDestinationType: destType,
           reviewDestinationUrl: destType === "custom" ? destUrl : undefined,
+          aiReplyEnabled: aiEnabled,
+          aiReplyThreshold: aiThreshold,
         }),
       });
       const data = await res.json();
@@ -169,6 +175,67 @@ export function ReviewFilterSettings({
           )}
         </div>
       )}
+
+      {/* Modifications 9 (client PDF, items 1/6): "I want that reviews over the rating that
+          owner selects be auto answered using AI." / "AI answering and Review filtering I only
+          want to be available for Premium Plan." A separate on/off + threshold from the
+          filtering settings above — this app never stores the text of a genuine public review
+          (high-star taps redirect straight out before anything is captured), so this drafts an
+          AI reply to a PRIVATE feedback submission whose rating meets this threshold, for the
+          owner to review/edit in the Feedback inbox — never auto-sent, since there's no
+          guaranteed channel back to an anonymous customer. */}
+      <div className="space-y-4 border-t border-border-default pt-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h3 className="text-body-sm font-semibold text-text-primary">AI-answered reviews</h3>
+            <p className="text-body-sm text-text-muted">
+              Auto-draft a reply for feedback at or above the rating you choose — you review and
+              send it yourself from the Feedback inbox.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={aiEnabled}
+            onClick={() => setAiEnabled((v) => !v)}
+            className="relative h-7 w-12 shrink-0 rounded-full bg-bg-muted transition-colors data-[on=true]:bg-brand"
+            data-on={aiEnabled}
+          >
+            <span
+              className={cn(
+                "absolute top-1 left-1 size-5 rounded-full bg-white shadow-sm transition-transform",
+                aiEnabled && "translate-x-5"
+              )}
+            />
+          </button>
+        </div>
+
+        {aiEnabled && (
+          <div className="space-y-1.5">
+            <Label>Auto-reply rating threshold</Label>
+            <div className="flex items-center gap-2">
+              {[1, 2, 3, 4, 5].map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setAiThreshold(value)}
+                  className="rounded-md p-1"
+                >
+                  <Star
+                    className={cn(
+                      "size-6 transition-colors",
+                      value <= aiThreshold ? "fill-warning text-warning" : "text-border-default"
+                    )}
+                  />
+                </button>
+              ))}
+            </div>
+            <p className="text-caption text-text-muted">
+              Feedback rated {aiThreshold}–5 stars gets an AI-drafted reply automatically.
+            </p>
+          </div>
+        )}
+      </div>
 
       <Button size="sm" onClick={handleSave} disabled={submitting}>
         {submitting ? "Saving…" : "Save settings"}

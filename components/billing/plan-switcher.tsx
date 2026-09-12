@@ -20,12 +20,14 @@ import { StripeCardForm } from "@/components/billing/stripe-card-form";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
-type PlanKey = "free" | "premium" | "network";
+// Modifications 9 (client PDF, item 3): "I want only 2 plans instead of 3." Network merged into
+// Premium (revision.md's Modifications 9 entry) — Premium now includes what Network used to
+// (unlimited locations, +$10/mo per extra location) at the client's stated $25/mo base.
+type PlanKey = "free" | "premium";
 
 const PLAN_INFO: Record<PlanKey, { name: string; blurb: string }> = {
   free: { name: "Free", blurb: "$0/mo forever, 1 location" },
-  premium: { name: "Premium", blurb: "$25/mo, 1 location" },
-  network: { name: "Network", blurb: "$60/mo, unlimited locations" },
+  premium: { name: "Premium", blurb: "$25/mo, unlimited locations (+$10/mo per extra)" },
 };
 
 export function PlanSwitcher({ currentPlanKey }: { currentPlanKey: string }) {
@@ -34,7 +36,11 @@ export function PlanSwitcher({ currentPlanKey }: { currentPlanKey: string }) {
   const [submitting, setSubmitting] = React.useState(false);
   const [paymentMethodId, setPaymentMethodId] = React.useState<string | null>(null);
 
-  const current = (["free", "premium", "network"].includes(currentPlanKey) ? currentPlanKey : "premium") as PlanKey;
+  // A legacy "default" or (now-retired) "network" plan_key falls back to displaying as
+  // "premium" here — neither is a selectable option anymore, but an account can still point at
+  // one (pre-restructure accounts on "default"; any account switched to "network" before this
+  // merge), and this UI needs *some* valid current selection to render against.
+  const current = (["free", "premium"].includes(currentPlanKey) ? currentPlanKey : "premium") as PlanKey;
   // Free -> paid is the one transition that needs a brand-new card (Free never has one on
   // file) — see changeSubscriptionPlan()'s doc comment for why the other two transitions
   // (paid<->paid, paid->free) don't need this dialog step at all.
@@ -73,7 +79,7 @@ export function PlanSwitcher({ currentPlanKey }: { currentPlanKey: string }) {
   return (
     <div className="space-y-3">
       <p className="text-body-sm font-medium text-text-primary">Change plan</p>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {(Object.keys(PLAN_INFO) as PlanKey[]).map((key) => {
           const isCurrent = key === current;
           return (

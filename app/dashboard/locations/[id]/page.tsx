@@ -64,6 +64,8 @@ export default async function LocationDetailPage({
           reviewFilterThreshold: location.reviewFilterThreshold,
           reviewDestinationType: location.reviewDestinationType,
           reviewDestinationUrl: location.reviewDestinationUrl,
+          aiReplyEnabled: location.aiReplyEnabled,
+          aiReplyThreshold: location.aiReplyThreshold,
         }}
       />
 

@@ -30,11 +30,11 @@ export async function POST(req: Request) {
   }
   const { name, email, password, planKey, cadence, paymentMethodId } = parsed.data;
 
-  // Modifications 5 pricing restructure (revision.md §3.4): a paid tier (premium/network)
-  // requires a real payment method — client-confirmed ("Yes, card since the beginning"). Not a
-  // zod-level requirement (see the schema's own comment) so this produces a clear field-specific
-  // error instead of a generic 400 from a failed schema shape.
-  if ((planKey === "premium" || planKey === "network") && !paymentMethodId) {
+  // Modifications 5 pricing restructure (revision.md §3.4): the paid tier (premium) requires a
+  // real payment method — client-confirmed ("Yes, card since the beginning"). Not a zod-level
+  // requirement (see the schema's own comment) so this produces a clear field-specific error
+  // instead of a generic 400 from a failed schema shape.
+  if (planKey === "premium" && !paymentMethodId) {
     return NextResponse.json(
       { message: "A payment method is required for this plan", fieldErrors: { paymentMethodId: ["Payment method is required"] } },
       { status: 400 }
@@ -64,7 +64,7 @@ export async function POST(req: Request) {
   //     'active' (invoice.payment_succeeded webhook, app/api/billing/webhook/route.ts).
   //   - planKey: 'free' — 'active' immediately. Free is truly free forever (client-confirmed,
   //     revision.md §2.1), there is no billing gate to wait on at all.
-  //   - planKey: 'premium'/'network' — createStripeSubscriptionForPlan() below sets 'active'
+  //   - planKey: 'premium' — createStripeSubscriptionForPlan() below sets 'active'
   //     itself once the real trial subscription is created (see that function's own comment for
   //     why: a real card is already attached, so there's no "wait for first charge" period like
   //     the legacy no-card path has). Seeded as 'grace_period' here as a safe default in case
@@ -101,7 +101,7 @@ export async function POST(req: Request) {
   //
   // Free tier: no Stripe subscription at all — see createStripeSubscriptionForPlan's own doc
   // comment and revision.md §3.2 for why (Free never bills anything, ever).
-  if (planKey === "premium" || planKey === "network") {
+  if (planKey === "premium") {
     try {
       await createStripeSubscriptionForPlan({
         accountId: account.id,

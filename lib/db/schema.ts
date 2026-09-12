@@ -54,6 +54,13 @@ export const planAppliesToEnum = pgEnum("plan_applies_to", ["business", "agency"
 // reads locations.reviewDestinationUrl instead.
 export const reviewDestinationTypeEnum = pgEnum("review_destination_type", ["google", "custom"]);
 export const privateFeedbackStatusEnum = pgEnum("private_feedback_status", ["new", "reviewed"]);
+// Modifications 9 (client PDF, item 1): "I want that reviews over the rating that owner selects
+// be auto answered using AI." The only review-like content this app stores locally is
+// private_feedback (high-star taps redirect straight to the public platform before anything is
+// captured — see reviewFilterThreshold's own comment) — 'idle' before generation is attempted,
+// 'generating' while the AI call is in flight, 'drafted' once a reply exists for the owner to
+// review/edit/send, 'failed' if the AI call errored (never silently retried forever).
+export const aiReplyStatusEnum = pgEnum("ai_reply_status", ["idle", "generating", "drafted", "failed"]);
 export const subscriptionStatusEnum = pgEnum("subscription_status", [
   "active",
   "past_due",
@@ -158,6 +165,12 @@ export const locations = pgTable(
     // Only meaningful when reviewDestinationType = 'custom' — a business-chosen alternate
     // platform (Trustpilot, Yelp, etc.) instead of googleReviewUrl.
     reviewDestinationUrl: text("review_destination_url"),
+    // Modifications 9 (client PDF, item 1) — a SEPARATE threshold from reviewFilterThreshold
+    // (the client described this as "the rating that owner selects", its own setting, not
+    // necessarily the same cutoff used for public/private routing). Defaulted off/disabled so
+    // every existing location is unaffected by construction, same pattern as reviewFilterEnabled.
+    aiReplyEnabled: boolean("ai_reply_enabled").notNull().default(false),
+    aiReplyThreshold: integer("ai_reply_threshold").notNull().default(3),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -187,6 +200,15 @@ export const privateFeedback = pgTable(
     contactName: text("contact_name"),
     contactEmail: text("contact_email"),
     status: privateFeedbackStatusEnum("status").notNull().default("new"),
+    // Modifications 9 (client PDF, item 1) — AI-drafted reply to this submission, only ever
+    // populated for accounts on a plan that includes AI answering (gated server-side, same
+    // pattern as review filtering's own Premium-only gate) with the feature turned on for this
+    // location and this row's rating >= that location's aiReplyThreshold. Stored as a DRAFT, not
+    // auto-sent — this app has no outbound channel back to an anonymous customer (no guaranteed
+    // email/SMS on file), so the owner reviews/edits it in the dashboard before doing anything
+    // with it themselves.
+    aiReplyStatus: aiReplyStatusEnum("ai_reply_status").notNull().default("idle"),
+    aiReplyDraft: text("ai_reply_draft"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

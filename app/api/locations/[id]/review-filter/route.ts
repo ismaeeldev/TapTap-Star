@@ -49,6 +49,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       );
     }
 
+    // Modifications 9 (client PDF, items 1/6): AI-answered reviews — same Premium-only gate as
+    // review filtering above (this route already required a paid plan to reach this point), so
+    // no separate check needed. aiReplyEnabled/aiReplyThreshold are optional in the schema (see
+    // its own comment) — only written when the request actually includes them, so this route
+    // stays backward-compatible with any caller that doesn't send those fields.
     const [updated] = await db
       .update(locations)
       .set({
@@ -57,6 +62,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         reviewDestinationType: parsed.data.reviewDestinationType,
         reviewDestinationUrl:
           parsed.data.reviewDestinationType === "custom" ? parsed.data.reviewDestinationUrl || null : null,
+        ...(parsed.data.aiReplyEnabled !== undefined ? { aiReplyEnabled: parsed.data.aiReplyEnabled } : {}),
+        ...(parsed.data.aiReplyThreshold !== undefined ? { aiReplyThreshold: parsed.data.aiReplyThreshold } : {}),
         updatedAt: new Date(),
       })
       .where(eq(locations.id, id))
