@@ -595,17 +595,88 @@ Client PDF with screenshots, 4 items:
 
 Lint clean across all 5 changed files. Committed and pushed to both remotes (`31f78fb`).
 
+## 14. Modifications 9 (client PDF, Sept 12-13) — AI reinstated, 2-plan merge, 5 other fixes
+
+Client PDF, 7 items. Item 1 explicitly reverses the earlier "remove ai feature not add"
+decision (§10) — confirmed with the client as a deliberate re-request, not an oversight,
+before building it.
+
+1. **AI-answered reviews.** "I want that reviews over the rating that owner selects be
+   auto answered using AI." This app never stores the text of a genuine public review —
+   a high-star tap redirects straight to Google before anything is captured locally
+   (review-filtering feature, §10) — so the only honest target for "AI-answered
+   reviews" is the private_feedback table (low-star submissions the app does store).
+   Added a per-location toggle + owner-configurable rating threshold
+   (`locations.aiReplyEnabled`/`aiReplyThreshold`, migration `0006`); a submission at or
+   above the threshold gets an OpenAI-generated reply draft
+   (`private_feedback.aiReplyStatus`/`aiReplyDraft`), shown in the Feedback inbox for
+   the owner to review/edit/copy — never auto-sent, since there's no guaranteed channel
+   back to an anonymous customer. Built against Anthropic's API first (no key
+   available); switched to OpenAI (`lib/ai/reply.ts`) once the client added
+   `OPEN_AI_KEYS` to `.env.local` mid-build. Verified live with the real key: a 3-star
+   submission at a location with threshold 3 produced a real, contextually accurate
+   drafted reply; a 1-star submission (below threshold) correctly generated nothing.
+
+2. **Sidebar order + rename.** Reordered to Overview - Devices - Locations - Employees
+   - Analytics - Reviews - Billing - Agency - Settings - Support exactly as specified;
+   "Feedback" relabeled "Reviews" (route unchanged, label only).
+
+3/5/6. **2 plans instead of 3.** Network merged into Premium — no live accounts were
+   ever on the old "premium" or "network" plan_keys (confirmed against production
+   before touching anything), so this was a clean data/code change with zero customer
+   migration. Premium now carries what Network used to (unlimited locations, +$10/mo
+   per location beyond the first) at the client's literal stated base, **$25/mo** (not
+   Network's old $60/mo) — confirmed with the client this was the real number, not a
+   loose description. AI-answering and review filtering are both gated to Premium only
+   (server-side, same enforcement pattern as every other plan gate in this app). The
+   `/pricing` page's exact visual layout still awaits the client's referenced video (not
+   sent yet) — this pass keeps it functionally correct (2 real plans, live prices,
+   correct features, a 2-loc/3-loc/4-loc price breakdown on the Premium card) rather
+   than guessing at a redesign that would need redoing once the video arrives.
+
+4. **Hide the camera QR scanner.** "Can I hide this? Dont have a camera.... I maybe use
+   this in future but not now." The device-activation "Scan QR code" camera button is
+   now hidden behind a one-line `SHOW_CAMERA_SCAN` toggle (not deleted — client may want
+   it back) — manual code entry is the only, always-visible option now.
+
+7. **Stale billing price.** "I want prices to be updated when changed. there it still
+   says 29.90$ instead of the actual one." The billing page was reading a CACHED
+   `subscriptions.amountCents` snapshot, written only at subscription-create time or by
+   a quantity-sync trigger — never when an admin edits a plan's price. Now computed live
+   from the plan's current `priceCents` (Network/Premium's per-location increment read
+   live too, from the account's actual current location count) — a price edit shows up
+   immediately, no sync job or webhook dependency. Verified by simulating a Premium
+   account with the old stale cached value and confirming the page now shows the live
+   price instead.
+
+Verified end-to-end against a local production build (real OpenAI key included): AI
+reply generation/gating, sidebar order, pricing/signup/billing pages (2 plans, no
+"Network" anywhere, correct prices), device-activation camera hidden, Free still capped
+at 1 location with the correct upgrade message, Premium confirmed able to create
+additional locations. All test accounts/locations/devices/feedback rows deleted
+afterward. Lint clean, type-check clean, full production build clean. Committed and
+pushed to both remotes (`db28f7c`).
+
+**Manual step required:** `OPEN_AI_KEYS` needs to be added to Vercel's production
+environment variables (it currently only exists in local `.env.local`) before AI-reply
+generation will work on the live site — without it, the feature degrades gracefully
+(marks the row `aiReplyStatus: 'failed'`, never blocks the feedback submission itself),
+it just won't actually generate replies until that's done.
+
 ---
 
 *This document is updated as decisions come in and work progresses. All core
-pricing-restructure work (steps 1-6 plus the Network per-location follow-up) is built,
-verified, and live. Modifications 6, 7 (items 1, 2, 3, 4, 6), and 8 (items 1-4) are all
-built, verified, and live. The QR-redirect root cause, the email logo/button bugs, and
-the Stripe CardElement hidden-ZIP bug are all fixed and live. The trial-expiration
-transition and the full Stripe webhook flow are both verified for real. The AI feature
-has been removed (client decision), the Free-tier device cap is set to 1 and enforced,
-and the review-filtering feature is built, verified, and live. Modifications 7 items 2
-and 3 have been dropped per explicit client instruction. The domain migration to
-`www.taptapstar.com` is live and confirmed working. Remaining: updating the registered
-Stripe webhook endpoint's URL to match the new domain (a Stripe Dashboard edit, not
-code) — everything else is either built and verified, or intentionally dropped.*
+pricing-restructure work (steps 1-6 plus the Network per-location follow-up, later
+merged into Premium per §14) is built, verified, and live. Modifications 6, 7 (items 1,
+2, 3, 4, 6), 8 (items 1-4), and 9 (items 1-7) are all built, verified, and live. The
+QR-redirect root cause, the email logo/button bugs, and the Stripe CardElement
+hidden-ZIP bug are all fixed and live. The trial-expiration transition and the full
+Stripe webhook flow are both verified for real. The Free-tier device cap is set to 1 and
+enforced, and the review-filtering and AI-answered-reviews features are both built,
+verified, and live (Premium-only). Modifications 7 items 2 and 3 have been dropped per
+explicit client instruction. The domain migration to `www.taptapstar.com` is live and
+confirmed working. Remaining: updating the registered Stripe webhook endpoint's URL to
+match the new domain, adding `OPEN_AI_KEYS` to Vercel's production environment, and
+redoing the `/pricing` page's visual layout once the client's referenced video arrives
+(all manual/pending, not code) — everything else is either built and verified, or
+intentionally dropped.*
