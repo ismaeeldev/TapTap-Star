@@ -27,7 +27,17 @@ function getStripePromise() {
 function cardElementOptions(isDark: boolean) {
   // Mirrors this app's own design tokens rather than Stripe's generic default styling, so the
   // embedded card field doesn't look like a foreign widget dropped into the page.
+  //
+  // Real bug found during live re-verification testing (Sept 2026): CardElement defaults to
+  // ALSO requiring a ZIP/postal code as part of "complete" — a 4th field embedded inline in the
+  // same box, with no visible required-field indicator distinguishing it from the number/expiry/
+  // CVC fields. Nothing else in this signup form collects a billing address, and nothing
+  // downstream (checked directly — no code anywhere reads a postal code from this flow) uses it,
+  // so a real customer entering a perfectly valid card could sit with a permanently-disabled
+  // "Start free trial" button and no visible reason why. hidePostalCode: true removes the field
+  // entirely rather than leaving an unlabeled trap.
   return {
+    hidePostalCode: true,
     style: {
       base: {
         fontSize: "15px",
