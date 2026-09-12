@@ -19,6 +19,7 @@ import { motion } from "framer-motion";
 import { Check, X } from "lucide-react";
 import { AnimatedGradientBorder } from "@/components/shared/animated-gradient-border";
 import { Button } from "@/components/ui/button";
+import { PremiumLocationCalculator } from "@/components/marketing/premium-location-calculator";
 import { fadeUp, marketingInView, staggerContainer } from "@/lib/motion";
 import { formatPriceCents } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -137,20 +138,6 @@ export function PricingTiers({ tiers }: { tiers: Tier[] }) {
                 priceDisplay={priceDisplay(premium)}
               />
               <p className="mt-1 text-body-sm text-text-muted">{locationSummary(premium.locationLimit)}</p>
-              {/* Modifications 9 (client PDF, item 5): "the option to know prices for 2 loc, 3
-                  loc, 4 loc....." — per-location pricing spelled out directly on the card. */}
-              {premium.perExtraLocationCents ? (
-                <p className="mt-1 text-caption text-text-muted">
-                  +{formatPriceCents(premium.perExtraLocationCents, "usd").replace(/\.00$/, "")}/mo per
-                  extra location — e.g. 2 locations:{" "}
-                  {formatPriceCents(premium.priceCents + premium.perExtraLocationCents, "usd").replace(/\.00$/, "")}
-                  /mo, 3 locations:{" "}
-                  {formatPriceCents(premium.priceCents + premium.perExtraLocationCents * 2, "usd").replace(/\.00$/, "")}
-                  /mo, 4 locations:{" "}
-                  {formatPriceCents(premium.priceCents + premium.perExtraLocationCents * 3, "usd").replace(/\.00$/, "")}
-                  /mo
-                </p>
-              ) : null}
               {premium.trialDays && (
                 <p className="mt-1 text-caption text-brand">{premium.trialDays}-day free trial</p>
               )}
@@ -158,6 +145,14 @@ export function PricingTiers({ tiers }: { tiers: Tier[] }) {
                 <Link href="/signup?plan=premium">Get {premium.trialDays} days free</Link>
               </Button>
               <FeatureList tierKey="premium" />
+
+              {/* Modifications 9 (client PDF, item 3/5 + reference video): "the option to know
+                  prices for 2 loc, 3 loc, 4 loc....." / "I want it to be like in the video." A
+                  live slider calculator matching the video's per-location pricing UI, instead of
+                  a static "+$X/extra location" line. */}
+              <div className="mt-6 border-t border-border-default pt-6">
+                <PremiumLocationCalculator trialDays={premium.trialDays} />
+              </div>
             </div>
           </AnimatedGradientBorder>
         </motion.div>
