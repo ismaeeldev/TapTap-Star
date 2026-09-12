@@ -27,8 +27,12 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             }}
           />
 
-          <Link href="/" className="relative z-10 mb-6 w-fit shrink-0 xl:mb-8">
-            <Logo className="scale-125 xl:scale-150" />
+          {/* Modifications 8 (client PDF, item 3): "I want this logo to be centered on desktop
+              view and a bit bigger." Previously left-aligned (just w-fit, no centering) — now
+              horizontally centered in the panel to match the client's annotated screenshot, and
+              scaled up further (was scale-125/150, now 150/175). */}
+          <Link href="/" className="relative z-10 mx-auto mb-6 w-fit shrink-0 xl:mb-8">
+            <Logo className="scale-150 xl:scale-175" />
           </Link>
 
           {/* Modifications 6 follow-up: image and logo enlarged (client request) to fill the
