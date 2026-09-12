@@ -677,22 +677,57 @@ pushed to both remotes (`db28f7c`).
   placeholder, not a confirmed formula — swap in the client's real numbers there once
   received (see item 3/5/6 above).
 
+## 15. Full Modifications 8/9 regression pass (Sept 13)
+
+Client asked for a full re-verification pass across everything: Modifications 8, 9, the
+AI feature, and the Premium account experience — "no bugs no gap no ui error." Ran a
+29-check Playwright suite end-to-end against a real Premium test account (review
+filtering + AI-answered-reviews both enabled, 25 seeded scans for pagination, a real
+OpenAI-generated reply) plus a separate 6-check pass on a Free-tier account, all against
+a fresh local production build.
+
+Found and fixed 2 real leftovers from the Network-into-Premium merge that earlier,
+narrower passes hadn't caught:
+- `/pricing`'s SEO `<meta description>` still read "Free, Premium, and Network plans" —
+  not visible on the page itself, but present in page source / search results / social
+  previews.
+- The review-filter settings panel's locked-state copy (shown to Free accounts) still
+  said "This is a Premium/Network feature" — wrong now that Network doesn't exist.
+
+Both fixed, confirmed via direct page-source/screenshot inspection. Fixed and pushed
+(`84294d8`).
+
+Everything else passed cleanly: AI-reply generation, gating (Premium-only), and
+threshold enforcement; sidebar order; error-toast timing; the camera scanner hidden;
+scan-feed pagination; live billing price (Premium correctly at $25.00, no stale
+$29.90/Network text); 2-plan signup/pricing/billing; the per-location slider matching
+the client's video; unlimited-location creation on Premium; the Free tier's $0 billing,
+enforced 1-location cap, and correctly-labeled Premium-only feature gates. A handful of
+apparent test failures during this pass were investigated directly (screenshots, longer
+waits, isolated repro scripts) rather than assumed as real bugs, and confirmed to be
+Playwright test-harness timing artifacts — an onboarding-tour dialog occasionally
+intercepting a click mid-navigation in the test script itself, not a real product issue
+(localStorage-based dismissal was independently confirmed to persist correctly across
+navigations in isolated repro runs). All test accounts/locations/devices/feedback rows
+deleted afterward. Lint clean, type-check clean, full production build clean.
+
 ---
 
 *This document is updated as decisions come in and work progresses. All core
 pricing-restructure work (steps 1-6 plus the Network per-location follow-up, later
 merged into Premium per §14) is built, verified, and live. Modifications 6, 7 (items 1,
-2, 3, 4, 6), 8 (items 1-4), and 9 (items 1-7) are all built, verified, and live. The
-QR-redirect root cause, the email logo/button bugs, and the Stripe CardElement
-hidden-ZIP bug are all fixed and live. The trial-expiration transition and the full
-Stripe webhook flow are both verified for real. The Free-tier device cap is set to 1 and
-enforced, and the review-filtering and AI-answered-reviews features are both built,
-verified, and live (Premium-only). Modifications 7 items 2 and 3 have been dropped per
-explicit client instruction. The domain migration to `www.taptapstar.com` is live and
-confirmed working. The `/pricing` page's per-location slider now matches the client's
-reference video's layout exactly, though its pricing curve is still a fitted placeholder
-pending the client's exact formula/table. Remaining: updating the registered Stripe
-webhook endpoint's URL to match the new domain, adding `OPEN_AI_KEYS` to Vercel's
-production environment, and swapping in the real per-location pricing curve once
-received (all manual/pending, not code) — everything else is either built and verified,
-or intentionally dropped.*
+2, 3, 4, 6), 8 (items 1-4), and 9 (items 1-7) are all built, verified, and live — and
+re-confirmed end-to-end in a dedicated full regression pass (§15). The QR-redirect root
+cause, the email logo/button bugs, and the Stripe CardElement hidden-ZIP bug are all
+fixed and live. The trial-expiration transition and the full Stripe webhook flow are
+both verified for real. The Free-tier device cap is set to 1 and enforced, and the
+review-filtering and AI-answered-reviews features are both built, verified, and live
+(Premium-only). Modifications 7 items 2 and 3 have been dropped per explicit client
+instruction. The domain migration to `www.taptapstar.com` is live and confirmed working.
+The `/pricing` page's per-location slider now matches the client's reference video's
+layout exactly, though its pricing curve is still a fitted placeholder pending the
+client's exact formula/table. Remaining: updating the registered Stripe webhook
+endpoint's URL to match the new domain, adding `OPEN_AI_KEYS` to Vercel's production
+environment, and swapping in the real per-location pricing curve once received (all
+manual/pending, not code) — everything else is either built and verified, or
+intentionally dropped.*
