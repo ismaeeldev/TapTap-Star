@@ -512,18 +512,48 @@ Committed and pushed to both remotes (`f1818db`).
   created Aug 22) still points at the old `taptap-star.vercel.app` URL, not the new
   `www.taptapstar.com` domain — a real, still-open item, not yet fixed (needs editing
   in the Stripe Dashboard; the signing secret does not need to change).
+- **Note**: the client has separately switched Vercel's production Stripe keys to
+  LIVE mode with real live-mode Products/Prices/webhook already configured on their
+  end — confirmed this was intentional, not a mistake. `.env.local` (this repo's local
+  dev config) stays on test-mode keys; all local verification in this document uses
+  those test keys exclusively.
+
+## 12. Real bug found and fixed: Stripe CardElement's hidden ZIP requirement (Sept 12)
+
+Asked to fully re-test the Premium/Network signup and plan-switch flows end to end
+after the webhook URL discussion — this time through the real UI with Playwright
+driving an actual Stripe test card, not just API-level checks. Found a genuine,
+previously-undetected bug:
+
+`CardElement` (components/billing/stripe-card-form.tsx) defaults to also requiring a
+postal/ZIP code as part of what counts as "complete" — but the card box only visually
+labels number/expiry/CVC, with no separate label for a 4th required field embedded
+inline in the same box. A real customer entering a perfectly valid card with no ZIP
+would sit staring at a permanently-disabled "Start free trial" / "Confirm switch"
+button with no visible reason why. Confirmed directly: a live signup attempt through
+the real UI sat stuck at exactly this point before the fix, screenshotted, not
+inferred.
+
+Fixed with `hidePostalCode: true` — nothing else in this app reads a postal code from
+this flow (checked directly). This one shared component covers every real card-
+collection surface in the app; verified all three independently after the fix:
+Premium signup, Network signup, and the dashboard's Free→paid plan switcher — each
+produced a real Stripe customer + trialing subscription (Premium/Network) or enabled
+the switch confirmation correctly. All Stripe test objects and local DB rows created
+during this verification pass cleaned up afterward. Lint clean, full build clean.
+Committed and pushed to both remotes (`87509ff`).
 
 ---
 
 *This document is updated as decisions come in and work progresses. All core
 pricing-restructure work (steps 1-6 plus the Network per-location follow-up) is built,
 verified, and live. Modifications 6 and 7 (items 1, 2, 3, 4, 6) are built, verified,
-and live. The QR-redirect root cause and the email logo/button bugs are fixed and
-live. The trial-expiration transition and the full Stripe webhook flow are both
-verified for real. The AI feature has been removed (client decision), the Free-tier
-device cap is set to 1 and enforced, and the review-filtering feature is built,
-verified, and live. Modifications 7 items 2 and 3 have been dropped per explicit
-client instruction. The domain migration to `www.taptapstar.com` is live and
-confirmed working. Remaining: updating the registered Stripe webhook endpoint's URL
-to match the new domain (a Stripe Dashboard edit, not code) — everything else is
-either built and verified, or intentionally dropped.*
+and live. The QR-redirect root cause, the email logo/button bugs, and the Stripe
+CardElement hidden-ZIP bug are all fixed and live. The trial-expiration transition and
+the full Stripe webhook flow are both verified for real. The AI feature has been
+removed (client decision), the Free-tier device cap is set to 1 and enforced, and the
+review-filtering feature is built, verified, and live. Modifications 7 items 2 and 3
+have been dropped per explicit client instruction. The domain migration to
+`www.taptapstar.com` is live and confirmed working. Remaining: updating the registered
+Stripe webhook endpoint's URL to match the new domain (a Stripe Dashboard edit, not
+code) — everything else is either built and verified, or intentionally dropped.*
