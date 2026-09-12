@@ -86,7 +86,7 @@ export function ReviewFilterSettings({
         </div>
         <p className="mt-2 text-body-sm text-text-muted">
           Route low-star ratings to a private feedback form instead of a public review. This is
-          a Premium/Network feature —{" "}
+          a Premium feature —{" "}
           <Link href="/dashboard/billing" className="text-brand hover:underline">
             upgrade your plan
           </Link>{" "}
