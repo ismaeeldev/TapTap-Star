@@ -543,17 +543,69 @@ the switch confirmation correctly. All Stripe test objects and local DB rows cre
 during this verification pass cleaned up afterward. Lint clean, full build clean.
 Committed and pushed to both remotes (`87509ff`).
 
+## 13. Modifications 8 (client PDF, Sept 12) — all 4 items built and verified
+
+Client PDF with screenshots, 4 items:
+
+1. **Error toast duration.** "This error messages have unlimited duration, I want it
+   to last 3.5 seconds before disappearing." Screenshot showed a "Please verify your
+   email before logging in." error sitting on screen indefinitely. `lib/toast.ts`'s
+   error variant was `duration: Infinity` (manual-dismiss only, per the original theme
+   guideline) — changed to `duration: 3500`. Verified live: a failed login attempt
+   shows the toast, which fully detaches from the DOM ~3.9s later (3.5s config +
+   Sonner's own exit-animation overhead).
+
+2. **Testimonial "logos."** "I want this review profiles to have some images of their
+   business on their names, some logo or something more credible." The homepage
+   testimonials section (`components/marketing/testimonials.tsx`) previously showed a
+   plain initial letter in a circle per card. Since these six testimonials are
+   illustrative personas, not real companies, a real business photo/logo would
+   misleadingly imply a specific business exists — instead gave each card a
+   business-type icon mark in a rounded-square badge (crossed utensils for the
+   restaurant owner, a building for the multi-location manager, people for the agency
+   partner, a coffee cup for the café owner, scissors for the salon owner, a shopping
+   bag for the retail manager), which reads as a real branded mark without fabricating
+   a company. Verified live via screenshot — all six cards render their icon badge
+   correctly.
+
+3. **Auth-panel logo centering/size.** "I want this logo to be centered on desktop view
+   and a bit bigger." Screenshot had a red arrow pointing at the left-aligned
+   TaptapStar wordmark on the login/signup left gradient panel. `app/(auth)/layout.tsx`
+   previously had no horizontal centering (`w-fit` only) and a smaller scale
+   (`scale-125`/`scale-150`). Added `mx-auto` and bumped the scale to
+   `scale-150`/`scale-175`. Verified live via screenshot on `/login` at desktop width —
+   wordmark is now centered in the panel and visibly larger.
+
+4. **Scan feed pagination.** "I don't want this list to be infinite, I want it to have
+   a maximum of 10 scans registered on each page, at the bottom of this I want the
+   option to continue seeing on the next page." The dashboard's "Live scan feed"
+   (`app/api/scans/recent/route.ts` + `components/dashboard/live-scan-feed.tsx`)
+   previously had a hardcoded `.limit(20)` with no pagination at all. Added real
+   server-side pagination: the API now takes a `page` param, returns 10 rows per page
+   plus `totalCount`/`hasNextPage`, and the component renders Previous/Next controls
+   with a "Page X of Y" label once there's more than one page. The 5-second live
+   auto-refresh (used on `/dashboard` overview and device-detail pages) stays active
+   only on page 1 — paging forward to browse older scans pauses it, since having rows
+   reorder live underneath someone mid-browse would be confusing; returning to page 1
+   resumes it. Verified live: seeded a test account with 25 scans (3 pages: 10/10/5),
+   confirmed page 1 shows 10 rows with Previous disabled, page 2 the next 10, page 3
+   the remaining 5 with Next disabled, Previous correctly steps back to page 1, and all
+   "Page X of Y" labels were accurate — 8/8 automated checks passed. All test data
+   (account, location, device, 25 scan rows) deleted afterward.
+
+Lint clean across all 5 changed files. Committed and pushed to both remotes (`31f78fb`).
+
 ---
 
 *This document is updated as decisions come in and work progresses. All core
 pricing-restructure work (steps 1-6 plus the Network per-location follow-up) is built,
-verified, and live. Modifications 6 and 7 (items 1, 2, 3, 4, 6) are built, verified,
-and live. The QR-redirect root cause, the email logo/button bugs, and the Stripe
-CardElement hidden-ZIP bug are all fixed and live. The trial-expiration transition and
-the full Stripe webhook flow are both verified for real. The AI feature has been
-removed (client decision), the Free-tier device cap is set to 1 and enforced, and the
-review-filtering feature is built, verified, and live. Modifications 7 items 2 and 3
-have been dropped per explicit client instruction. The domain migration to
+verified, and live. Modifications 6, 7 (items 1, 2, 3, 4, 6), and 8 (items 1-4) are all
+built, verified, and live. The QR-redirect root cause, the email logo/button bugs, and
+the Stripe CardElement hidden-ZIP bug are all fixed and live. The trial-expiration
+transition and the full Stripe webhook flow are both verified for real. The AI feature
+has been removed (client decision), the Free-tier device cap is set to 1 and enforced,
+and the review-filtering feature is built, verified, and live. Modifications 7 items 2
+and 3 have been dropped per explicit client instruction. The domain migration to
 `www.taptapstar.com` is live and confirmed working. Remaining: updating the registered
 Stripe webhook endpoint's URL to match the new domain (a Stripe Dashboard edit, not
 code) — everything else is either built and verified, or intentionally dropped.*
