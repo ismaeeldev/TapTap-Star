@@ -481,15 +481,49 @@ Committed and pushed to both remotes (`f1818db`).
 
 ---
 
+## 11. Shop button + webhook migration (Sept 12)
+
+- **Shop button (Modifications 7 item 6)**: a real external link to
+  `https://taptapstar.eu` added to the navbar (desktop + mobile) and footer. Client
+  confirmed: build it now, domain purchase follows separately — a real link, not a
+  feature flag; it will simply fail to resolve until the domain is registered, same
+  as any not-yet-live domain. Verified live: renders correctly and links to the right
+  URL in all three placements.
+- **Modifications 7 items 2 and 3 dropped** per explicit client instruction, after
+  checking `revision.md`, `Refrence/Chat.txt`, and the AgentGuide scope docs for any
+  answer already on record — found none beyond what's already resolved (the AI
+  feature's prior lock). These needed direct client input and didn't get it; per the
+  client's own call, no longer pursued.
+- **Domain migration confirmed live**: `www.taptapstar.com` now correctly serves this
+  app (the client completed the DNS switch away from the old Shopify store) — the
+  already-printed QR plates work with zero further code changes. `NEXT_PUBLIC_APP_URL`
+  updated in Vercel to `https://www.taptapstar.com` accordingly.
+- **Stripe webhook fully tested locally, end to end, zero bugs found**: ran the real
+  app against a real `stripe listen` session (using this project's actual Stripe test
+  account explicitly, not the CLI's misconfigured default profile — a real risk
+  checked and avoided), with a freshly rotated signing secret. Confirmed all three
+  CLI-triggerable events (`invoice.payment_succeeded`, `invoice.payment_failed`,
+  `customer.subscription.deleted`) deliver successfully and correctly transition a
+  real test account's status (`active`↔`grace_period`↔`suspended`) with the matching
+  email firing each time. `invoice.upcoming` isn't independently triggerable via the
+  CLI; unchanged since its own prior verification round. All Stripe test objects and
+  local DB rows cleaned up afterward.
+- **Found**: the webhook endpoint actually registered in Stripe (`we_1U78PIF2Eziu...`,
+  created Aug 22) still points at the old `taptap-star.vercel.app` URL, not the new
+  `www.taptapstar.com` domain — a real, still-open item, not yet fixed (needs editing
+  in the Stripe Dashboard; the signing secret does not need to change).
+
+---
+
 *This document is updated as decisions come in and work progresses. All core
 pricing-restructure work (steps 1-6 plus the Network per-location follow-up) is built,
-verified, and live. Modifications 6 and 7 (items 1-4) are built, verified, and live.
-The QR-redirect root cause and the email logo/button bugs are fixed and live. The
-trial-expiration transition is verified for real. The AI feature has been removed
-(client decision), the Free-tier device cap is set to 1 and enforced, and the new
-review-filtering feature is built, verified, and live. Remaining, all waiting on the
-client rather than more building: Modifications 7 items 5-9 (the `taptapstar.eu`
-redirect button, the full Free/Premium pricing-model restructure, and matching
-Digifeel/Tapstar feature-for-feature) — plus one manual, non-code step: registering a
-real webhook endpoint in the Stripe Dashboard before relying on production billing
-events.*
+verified, and live. Modifications 6 and 7 (items 1, 2, 3, 4, 6) are built, verified,
+and live. The QR-redirect root cause and the email logo/button bugs are fixed and
+live. The trial-expiration transition and the full Stripe webhook flow are both
+verified for real. The AI feature has been removed (client decision), the Free-tier
+device cap is set to 1 and enforced, and the review-filtering feature is built,
+verified, and live. Modifications 7 items 2 and 3 have been dropped per explicit
+client instruction. The domain migration to `www.taptapstar.com` is live and
+confirmed working. Remaining: updating the registered Stripe webhook endpoint's URL
+to match the new domain (a Stripe Dashboard edit, not code) — everything else is
+either built and verified, or intentionally dropped.*
