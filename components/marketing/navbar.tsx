@@ -3,12 +3,21 @@
 import * as React from "react";
 import Link from "next/link";
 import { useScroll, useMotionValueEvent, motion } from "framer-motion";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ShoppingBag } from "lucide-react";
 import { Logo } from "@/components/shared/logo";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { InstallAppButton } from "@/components/shared/install-app-button";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+// Modifications 7 (client PDF, item 6): "I want people that visit this website to have the
+// option to press a button and be redirected to the main website with products. The domain
+// will be taptapstar.eu." Client confirmed (Sept 2026 round): build the button now, the domain
+// itself will be registered later — a real external link, not a feature-flagged placeholder,
+// since the client explicitly asked for it to exist now. Until the domain is live it will
+// simply fail to resolve like any not-yet-registered domain, same as clicking a link to any
+// site that isn't up yet; nothing to hide behind a flag.
+const SHOP_URL = "https://taptapstar.eu";
 
 const LINKS = [
   { href: "/#how-it-works", label: "How it works" },
@@ -62,6 +71,11 @@ export function MarketingNavbar() {
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
+          <Button asChild variant="ghost" size="sm">
+            <a href={SHOP_URL} target="_blank" rel="noopener noreferrer">
+              <ShoppingBag className="size-4" /> Shop
+            </a>
+          </Button>
           <InstallAppButton variant="navbar" />
           <ThemeToggle />
           <Button asChild variant="ghost" size="sm">
@@ -98,6 +112,11 @@ export function MarketingNavbar() {
             </Link>
           ))}
           <div className="mt-2 flex flex-col gap-2 border-t border-border-default pt-3">
+            <Button asChild variant="secondary" onClick={() => setMobileOpen(false)}>
+              <a href={SHOP_URL} target="_blank" rel="noopener noreferrer">
+                <ShoppingBag className="size-4" /> Shop
+              </a>
+            </Button>
             <InstallAppButton variant="sidebar" />
             <Button asChild variant="secondary" onClick={() => setMobileOpen(false)}>
               <Link href="/login">Log in</Link>

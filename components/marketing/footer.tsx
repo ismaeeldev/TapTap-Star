@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Logo } from "@/components/shared/logo";
 
-const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
+const COLUMNS: { title: string; links: { href: string; label: string; external?: boolean }[] }[] = [
   {
     title: "Product",
     links: [
@@ -16,6 +16,9 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
     links: [
       { href: "/faq", label: "FAQ" },
       { href: "/contact", label: "Contact" },
+      // Modifications 7 item 6 — the client's product storefront, a real external site, not a
+      // route in this app.
+      { href: "https://taptapstar.eu", label: "Shop", external: true },
     ],
   },
   {
@@ -47,16 +50,29 @@ export function MarketingFooter() {
                 {col.title}
               </p>
               <ul className="mt-4 space-y-3">
-                {col.links.map((link) => (
-                  <li key={link.href}>
-                    <Link
-                      href={link.href}
-                      className="text-body-sm text-text-secondary transition-colors hover:text-text-primary"
-                    >
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
+                {col.links.map((link) =>
+                  link.external ? (
+                    <li key={link.href}>
+                      <a
+                        href={link.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-body-sm text-text-secondary transition-colors hover:text-text-primary"
+                      >
+                        {link.label}
+                      </a>
+                    </li>
+                  ) : (
+                    <li key={link.href}>
+                      <Link
+                        href={link.href}
+                        className="text-body-sm text-text-secondary transition-colors hover:text-text-primary"
+                      >
+                        {link.label}
+                      </Link>
+                    </li>
+                  )
+                )}
               </ul>
             </div>
           ))}
