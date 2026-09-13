@@ -711,6 +711,34 @@ intercepting a click mid-navigation in the test script itself, not a real produc
 navigations in isolated repro runs). All test accounts/locations/devices/feedback rows
 deleted afterward. Lint clean, type-check clean, full production build clean.
 
+## 16. Second full stability pass, repeated 3x (Sept 13)
+
+Client asked for one more full check across Mod 8, Mod 9, and the AI feature — repeat
+runs to catch flakiness, not just a single pass, plus a manual visual/UI review. Ran the
+same category of end-to-end suite as §15 (fresh Premium + Free test accounts, real
+OpenAI-generated reply, 25 seeded scans) but repeated the core functional checks 3
+times back-to-back, then separately captured full-page screenshots at every key screen
+(pricing, signup, dashboard overview, devices, billing, location settings, feedback
+inbox, mobile pricing) for a direct visual read rather than relying on assertions alone.
+
+Result: the product itself had zero real defects this pass — every apparent failure
+traced back to the test script's own screenshot/assertion timing (firing before an RSC
+page's `loading.tsx` skeleton had resolved into real content, or a `mouse.wheel` scroll
+distance overshooting past the target section since the page is shorter than the
+scrolled amount) or an already-established test-harness quirk (§15's onboarding-tour
+click-interception in the harness only), each confirmed by re-running with a longer
+settle wait and inspecting the resulting screenshot directly. No code changes were
+needed as a result of this pass — nothing to fix, only more verification.
+
+Manually reviewed every captured screenshot pixel-by-pixel for layout, spacing, and
+copy correctness (not just presence/absence checks): pricing page (2-column layout,
+slider calculator, no stray "Network" text), signup, dashboard overview, devices list
+(camera button correctly absent), billing (Premium at live $25.00, correct plan
+switcher copy), location settings (AI-answered-reviews + review-filtering both
+correctly rendered and toggled for Premium), feedback inbox (real AI-drafted reply with
+working "Copy reply"), Free-tier billing and locked-feature messaging, and the
+per-location slider on a 390px mobile viewport. No visual defects found in any of them.
+
 ---
 
 *This document is updated as decisions come in and work progresses. All core
