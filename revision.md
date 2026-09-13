@@ -741,21 +741,64 @@ per-location slider on a 390px mobile viewport. No visual defects found in any o
 
 ---
 
+## 17. Mod 9 deep edge-case + attack-surface pass (Sept 13)
+
+Client asked specifically for more scrutiny on Modifications 9 — find bugs, fix them,
+confirm zero chance of error. Went beyond the earlier functional/visual passes (§15,
+§16) into deliberate edge cases and adversarial inputs:
+
+- **Real end-to-end Premium signup** through the actual UI with a real Stripe test card
+  (4242...), not a simulated DB insert — confirmed a genuine Stripe customer + $25.00
+  subscription is created, the signup reaches `/verify-email`, and the prior
+  hidden-ZIP-field fix (§12) still holds on this exact form.
+- **AI-reply threshold exactness**: rating exactly at the configured threshold (3)
+  correctly triggers a drafted reply; one rating below (2) correctly does not.
+- **Input validation**: out-of-range rating (999), negative rating (-1), a missing
+  device code, and a nonexistent device code are all correctly rejected (400/404).
+- **XSS**: a `<script>`/`onerror` payload in a feedback comment is accepted and stored,
+  but never executes in the dashboard — confirmed no JS alert fires and no live
+  `<script>` element gets injected, i.e. React's default escaping is doing its job.
+- **Race condition**: two AI-eligible feedback submissions fired concurrently each get
+  their own distinct, non-contaminated AI reply — no shared-state bug between requests.
+- **Downgrade security**: an account switched from Premium back to Free is correctly
+  blocked (403) from re-enabling review-filtering/AI-answering via a direct API call
+  (not just a hidden button) — the server-side gate holds even when bypassing the UI.
+- **Full plan-switch cycle through the real UI**: Free → Premium (real card, real
+  Stripe subscription, correct DB update, success toast, correct billing display) →
+  Free (immediate cancellation, subscription marked canceled, locations preserved) →
+  Premium again — all confirmed working with zero data loss or inconsistent state at
+  any step.
+
+Several apparent failures during this pass were investigated in depth rather than
+assumed as bugs, and all were confirmed to be test-script defects, not product ones:
+`isVisible()` used without a wait against Stripe's iframe (a point-in-time check, not a
+poll, so it can catch the iframe mid-mount), Playwright's `fill()` bypassing the
+keystroke events Stripe's own input-formatting JS depends on (fixed by using
+`pressSequentially` instead), and typing into a not-yet-focused field. Each was fixed in
+the test harness and re-run to a clean pass. Zero real defects found in the product
+itself — result: 22/22 and then 11/11 (after the harness fixes) on the two dedicated
+test scripts for this pass. All test accounts and their Stripe test-mode
+customers/subscriptions cleaned up afterward (harmless either way — Stripe test mode).
+
+---
+
 *This document is updated as decisions come in and work progresses. All core
 pricing-restructure work (steps 1-6 plus the Network per-location follow-up, later
 merged into Premium per §14) is built, verified, and live. Modifications 6, 7 (items 1,
 2, 3, 4, 6), 8 (items 1-4), and 9 (items 1-7) are all built, verified, and live — and
-re-confirmed end-to-end in a dedicated full regression pass (§15). The QR-redirect root
-cause, the email logo/button bugs, and the Stripe CardElement hidden-ZIP bug are all
-fixed and live. The trial-expiration transition and the full Stripe webhook flow are
-both verified for real. The Free-tier device cap is set to 1 and enforced, and the
-review-filtering and AI-answered-reviews features are both built, verified, and live
-(Premium-only). Modifications 7 items 2 and 3 have been dropped per explicit client
-instruction. The domain migration to `www.taptapstar.com` is live and confirmed working.
-The `/pricing` page's per-location slider now matches the client's reference video's
-layout exactly, though its pricing curve is still a fitted placeholder pending the
-client's exact formula/table. Remaining: updating the registered Stripe webhook
-endpoint's URL to match the new domain, adding `OPEN_AI_KEYS` to Vercel's production
-environment, and swapping in the real per-location pricing curve once received (all
-manual/pending, not code) — everything else is either built and verified, or
-intentionally dropped.*
+re-confirmed end-to-end across three separate passes (§15, §16, §17), including
+deliberate edge-case and adversarial-input testing with zero real defects found. The
+QR-redirect root cause, the email logo/button bugs, and the Stripe CardElement
+hidden-ZIP bug are all fixed and live (and re-confirmed still fixed in §17). The
+trial-expiration transition and the full Stripe webhook flow are both verified for
+real. The Free-tier device cap is set to 1 and enforced, and the review-filtering and
+AI-answered-reviews features are both built, verified, and live (Premium-only,
+enforced server-side even against direct API calls that bypass the UI). Modifications 7
+items 2 and 3 have been dropped per explicit client instruction. The domain migration
+to `www.taptapstar.com` is live and confirmed working. The `/pricing` page's
+per-location slider now matches the client's reference video's layout exactly, though
+its pricing curve is still a fitted placeholder pending the client's exact
+formula/table. Remaining: updating the registered Stripe webhook endpoint's URL to
+match the new domain, adding `OPEN_AI_KEYS` to Vercel's production environment, and
+swapping in the real per-location pricing curve once received (all manual/pending, not
+code) — everything else is either built and verified, or intentionally dropped.*
