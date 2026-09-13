@@ -34,7 +34,7 @@ type Tier = {
   perExtraLocationCents?: number | null;
 };
 
-type FeatureRow = { label: string; free: boolean; premium: boolean };
+type FeatureRow = { label: string; free: boolean; premium: boolean; premiumLabel?: string };
 
 // Feature split per revision.md §2.2 — Taptapstar's own product, not Digifeel's literal
 // review-management feature list.
@@ -43,9 +43,12 @@ type FeatureRow = { label: string; free: boolean; premium: boolean };
 // re-request, overriding the earlier "remove ai feature not add" decision — see revision.md's
 // Modifications 9 entry) and, per item 6 ("AI answering and Review filtering I only want to be
 // available for Premium Plan"), gated to Premium only, same as review filtering already was.
+// UI polish (client request, Sept 2026 round): "1 location" and "Unlimited locations" both
+// showing as checked on Premium read as contradictory at a glance, even though both are
+// technically true (Premium starts at 1 location and scales up). One row per plan now, with
+// Premium's own wording via premiumLabel, instead of two overlapping location rows.
 const FEATURES: FeatureRow[] = [
-  { label: "1 location", free: true, premium: true },
-  { label: "Unlimited locations", free: false, premium: true },
+  { label: "1 location", free: true, premium: true, premiumLabel: "Unlimited locations" },
   { label: "Basic analytics dashboard", free: true, premium: true },
   { label: "Full analytics (location breakdown)", free: false, premium: true },
   { label: "AI-powered review replies", free: false, premium: true },
@@ -109,8 +112,13 @@ export function PricingTiers({ tiers }: { tiers: Tier[] }) {
         variants={staggerContainer}
         className="grid gap-6 md:grid-cols-2"
       >
-        {/* Free */}
-        <motion.div variants={fadeUp} className="rounded-lg border border-border-default bg-bg-card p-8">
+        {/* Free — flex column so the "why upgrade" panel below can sit at the bottom regardless
+            of feature-list length, matching Premium's own bottom-anchored calculator instead of
+            leaving a large empty gap under a shorter card (UI polish, client request). */}
+        <motion.div
+          variants={fadeUp}
+          className="flex h-full flex-col rounded-lg border border-border-default bg-bg-card p-8"
+        >
           <TierHeader
             name="Free"
             description="Just what you need to set up and manage your account."
@@ -121,6 +129,22 @@ export function PricingTiers({ tiers }: { tiers: Tier[] }) {
             <Link href="/signup?plan=free">Get started free</Link>
           </Button>
           <FeatureList tierKey="free" />
+
+          <div className="mt-6 flex flex-1 flex-col justify-end">
+            <div className="rounded-lg border border-border-default bg-bg-page p-6">
+              <p className="text-body-sm font-medium text-text-primary">
+                Outgrowing a single location?
+              </p>
+              <p className="mt-1.5 text-body-sm text-text-muted">
+                Premium unlocks unlimited locations, AI-assisted review replies, and full
+                cross-location analytics — with a 14-day free trial, no card charged until it
+                ends.
+              </p>
+              <Button asChild variant="secondary" size="sm" className="mt-4 w-full">
+                <Link href="/signup?plan=premium">Compare Premium</Link>
+              </Button>
+            </div>
+          </div>
         </motion.div>
 
         {/* Premium — the one AnimatedGradientBorder on this page (theme guideline 0.1's
@@ -141,9 +165,10 @@ export function PricingTiers({ tiers }: { tiers: Tier[] }) {
               {premium.trialDays && (
                 <p className="mt-1 text-caption text-brand">{premium.trialDays}-day free trial</p>
               )}
-              <Button asChild size="hero" className="mt-6 w-full">
-                <Link href="/signup?plan=premium">Get {premium.trialDays} days free</Link>
-              </Button>
+              {/* UI polish (client request, Sept 2026 round): previously had a second "Get N days
+                  free" CTA here as well as one inside the calculator below — one real CTA is
+                  enough, and the calculator's own CTA is the more useful one (it reflects the
+                  location count the visitor actually selected). */}
               <FeatureList tierKey="premium" />
 
               {/* Modifications 9 (client PDF, item 3/5 + reference video): "the option to know
@@ -189,6 +214,7 @@ function FeatureList({ tierKey }: { tierKey: "free" | "premium" }) {
     <ul className="mt-6 space-y-3 border-t border-border-default pt-6">
       {FEATURES.map((f) => {
         const included = f[tierKey];
+        const label = tierKey === "premium" && f.premiumLabel ? f.premiumLabel : f.label;
         return (
           <li
             key={f.label}
@@ -202,7 +228,7 @@ function FeatureList({ tierKey }: { tierKey: "free" | "premium" }) {
             ) : (
               <X className="size-4 shrink-0 text-text-muted" />
             )}
-            {f.label}
+            {label}
           </li>
         );
       })}
