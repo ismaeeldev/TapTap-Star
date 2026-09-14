@@ -10,19 +10,26 @@ import { toast } from "@/lib/toast";
 import { ManualActivateForm } from "./manual-activate-form";
 
 // Client-requested: a real camera QR scanner as the primary way to activate a device (matching
-// what a real physical device is used for — scanning), with the manual code-entry box (the only
-// option that existed before this) hidden by default rather than removed — kept for future
-// device batches / anyone without a working camera, reachable via the small link below the
-// scanner button. qr-scanner (nimiq/qr-scanner) is loaded dynamically so its ~50KB decode engine
-// never ships in the initial bundle for users who never open the scanner.
+// what a real physical device is used for — scanning). qr-scanner (nimiq/qr-scanner) is loaded
+// dynamically so its ~50KB decode engine never ships in the initial bundle for users who never
+// open the scanner.
 //
-// Modifications 9 (client PDF, item 4) briefly hid this ("Can I hide this? Dont have a
-// camera....") — re-enabled per the client's follow-up request (Sept 14) to turn it back on.
-// Left as a one-line toggle (not deleted either time) since this has already flipped once.
+// Modifications 9 (client PDF, item 4) briefly hid the scanner entirely ("Can I hide this?
+// Dont have a camera....") — re-enabled per the client's urgent follow-up (Sept 14). That same
+// follow-up also asked to hide the manual "Don't have a camera? Enter the code manually" link
+// specifically — camera scan should be the only visible way in for now, manual entry reserved
+// for a future re-enable. SHOW_MANUAL_ENTRY_LINK controls only the visible fallback link;
+// ManualActivateForm itself, and the auto-reveal-on-real-camera-failure path below, are left
+// alone on purpose — a user whose camera permission is denied or hardware genuinely fails still
+// needs *some* way to activate a device, so that safety net stays even while the link is hidden.
 const SHOW_CAMERA_SCAN = true;
+const SHOW_MANUAL_ENTRY_LINK = false;
 export function ActivateDeviceWidget() {
   const router = useRouter();
   const [scanOpen, setScanOpen] = useState(false);
+  // Also the last-resort safety net for a real camera failure below (denied permission, no
+  // hardware) — setShowManual(true) there reveals ManualActivateForm directly even though
+  // SHOW_MANUAL_ENTRY_LINK is off, so a real user isn't stuck with a dead scan button.
   const [showManual, setShowManual] = useState(!SHOW_CAMERA_SCAN);
   const videoRef = useRef<HTMLVideoElement>(null);
   const scannerRef = useRef<QrScannerType | null>(null);
@@ -108,8 +115,12 @@ export function ActivateDeviceWidget() {
       )}
 
       {showManual ? (
+        // Rendered when SHOW_CAMERA_SCAN is off, a real camera failure fired the setShowManual
+        // safety net above, or the client re-enables SHOW_MANUAL_ENTRY_LINK below — never for a
+        // plain "I'd rather type it" click while camera scan is working, per the client's
+        // current request.
         <ManualActivateForm />
-      ) : (
+      ) : SHOW_MANUAL_ENTRY_LINK ? (
         <button
           type="button"
           onClick={() => setShowManual(true)}
@@ -118,7 +129,7 @@ export function ActivateDeviceWidget() {
           <KeyRound className="size-3.5" />
           Don&apos;t have a camera? Enter the code manually
         </button>
-      )}
+      ) : null}
     </div>
   );
 }
