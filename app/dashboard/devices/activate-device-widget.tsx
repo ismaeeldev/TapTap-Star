@@ -16,11 +16,10 @@ import { ManualActivateForm } from "./manual-activate-form";
 // scanner button. qr-scanner (nimiq/qr-scanner) is loaded dynamically so its ~50KB decode engine
 // never ships in the initial bundle for users who never open the scanner.
 //
-// Modifications 9 (client PDF, item 4): "Can I hide this? Dont have a camera.... I maybe use
-// this in future but not now" — the "Scan QR code" camera button is hidden; manual code entry is
-// now the only, always-visible way to activate a device. Kept as a one-line toggle rather than
-// deleting the scanner code, since the client explicitly said they may want it back later.
-const SHOW_CAMERA_SCAN = false;
+// Modifications 9 (client PDF, item 4) briefly hid this ("Can I hide this? Dont have a
+// camera....") — re-enabled per the client's follow-up request (Sept 14) to turn it back on.
+// Left as a one-line toggle (not deleted either time) since this has already flipped once.
+const SHOW_CAMERA_SCAN = true;
 export function ActivateDeviceWidget() {
   const router = useRouter();
   const [scanOpen, setScanOpen] = useState(false);
