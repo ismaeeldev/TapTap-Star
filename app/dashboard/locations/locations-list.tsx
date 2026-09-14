@@ -14,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { GoogleReviewUrlHint } from "@/components/shared/google-review-url-hint";
 import { toast } from "@/lib/toast";
 
 type LocationRow = {
@@ -86,6 +87,7 @@ function AddLocationDialog({ trigger }: { trigger: React.ReactNode }) {
               onChange={(e) => setForm({ ...form, googleReviewUrl: e.target.value })}
               placeholder="https://g.page/r/..."
             />
+            <GoogleReviewUrlHint />
           </div>
         </div>
         <DialogFooter>
@@ -203,6 +205,7 @@ function EditDeleteControls({ location }: { location: LocationRow }) {
                 value={form.googleReviewUrl}
                 onChange={(e) => setForm({ ...form, googleReviewUrl: e.target.value })}
               />
+              <GoogleReviewUrlHint />
             </div>
           </div>
           <DialogFooter>

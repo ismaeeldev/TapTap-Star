@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { AnimatedGradientBorder } from "@/components/shared/animated-gradient-border";
+import { GoogleReviewUrlHint } from "@/components/shared/google-review-url-hint";
 import { toast } from "@/lib/toast";
 import { fadeUp } from "@/lib/motion";
 
@@ -437,6 +438,7 @@ function NewLocationForm({
           value={googleReviewUrl}
           onChange={(e) => setGoogleReviewUrl(e.target.value)}
         />
+        <GoogleReviewUrlHint />
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="loc-language">Language</Label>
