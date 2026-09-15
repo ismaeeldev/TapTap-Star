@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -95,6 +95,7 @@ function AddLocationDialog({ trigger }: { trigger: React.ReactNode }) {
             onClick={handleSubmit}
             disabled={submitting || !form.name || !form.address || !form.googleReviewUrl}
           >
+            {submitting && <Loader2 className="animate-spin" />}
             {submitting ? "Creating…" : "Create location"}
           </Button>
         </DialogFooter>
@@ -210,6 +211,7 @@ function EditDeleteControls({ location }: { location: LocationRow }) {
           </div>
           <DialogFooter>
             <Button onClick={handleEdit} disabled={submitting}>
+              {submitting && <Loader2 className="animate-spin" />}
               {submitting ? "Saving…" : "Save changes"}
             </Button>
           </DialogFooter>
@@ -232,6 +234,7 @@ function EditDeleteControls({ location }: { location: LocationRow }) {
           </p>
           <DialogFooter>
             <Button variant="destructive" onClick={handleDelete} disabled={submitting}>
+              {submitting && <Loader2 className="animate-spin" />}
               {submitting ? "Deleting…" : "Delete location"}
             </Button>
           </DialogFooter>
