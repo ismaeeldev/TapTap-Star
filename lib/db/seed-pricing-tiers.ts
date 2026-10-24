@@ -60,10 +60,9 @@ async function seedPricingTiers() {
       priceCents: 0,
       annualPriceCents: null,
       locationLimit: 1,
-      // Client-confirmed: "1 device (matches Free's 1-location cap)" — Free stays a single-
-      // device/single-location tier. Premium/Network intentionally left uncapped (null) — no
-      // device limit was ever requested for the paid tiers.
-      deviceLimit: 1,
+      // Client change (Oct 2026): Free allows unlimited devices (null = no cap). Free stays
+      // capped at 1 location; Premium is uncapped on both.
+      deviceLimit: null,
       trialDays: null,
       perExtraLocationCents: null,
     },

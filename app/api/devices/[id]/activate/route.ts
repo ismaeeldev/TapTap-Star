@@ -57,10 +57,9 @@ export async function POST(
       throw new AuthError("Forbidden — location does not belong to your account", 403);
     }
 
-    // Device cap for the Free tier (client-confirmed: same 1-device reasoning as Free's existing
-    // 1-location cap). Premium/Network are unlimited (deviceLimit: null), and so is the legacy
-    // "default" plan (deviceLimit: null from this column's additive migration) — a genuine no-op
-    // for every pre-existing account, mirroring app/api/locations/route.ts's exact pattern.
+    // Optional per-plan device cap (pricing_plans.device_limit). Every plan is currently
+    // unlimited (null) — Free's 1-device cap was removed at the client's request — so this is a
+    // no-op unless a plan row sets a limit again; mirrors app/api/locations/route.ts's pattern.
     // Enforced here at ACTIVATION, not at batch-create time — an unassigned device belongs to no
     // account yet and shouldn't count against anything.
     const account = await withDbRetry("POST /api/devices/[id]/activate account lookup", () =>
